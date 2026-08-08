@@ -13,6 +13,7 @@ import { Logo } from '@/components/Logo';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useProfile, ActivityLevel, BudgetPeriod, DietType, Goal, Sex } from '@/context/ProfileContext';
+import { useWeight } from '@/context/WeightContext';
 
 const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
 
@@ -182,6 +183,7 @@ export default function OnboardingScreen() {
   const c = Colors[scheme];
   const insets = useSafeAreaInsets();
   const { createProfile } = useProfile();
+  const { seedFromOnboarding } = useWeight();
 
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(initialForm);
@@ -232,7 +234,11 @@ export default function OnboardingScreen() {
       allergies: form.allergies.filter((a) => a !== NONE_ALLERGY),
     });
     setSubmitting(false);
-    if (submitError) setError(submitError);
+    if (submitError) {
+      setError(submitError);
+      return;
+    }
+    seedFromOnboarding(form.weight_kg, form.goal_weight_kg);
   };
 
   const progressFilled = Math.min(Math.max(step, 0), TOTAL_DATA_STEPS);

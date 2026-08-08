@@ -32,8 +32,8 @@ const styles = StyleSheet.create({
   // Taller than the 64pt bar itself and centered on it (no marginTop offset) - it
   // overflows evenly past both the top and bottom edges instead of just poking above.
   button: {
-    width: 72,
-    height: 72,
+    width: 64,
+    height: 64,
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',

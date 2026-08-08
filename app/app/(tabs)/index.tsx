@@ -22,7 +22,6 @@ import {
   StyleSheet,
   View as RNView,
 } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
@@ -35,8 +34,9 @@ import { usePlan } from '@/context/PlanContext';
 import { Meal, mealTotals, targets } from '@/constants/planData';
 import { accountCreatedAt } from '@/constants/account';
 import { useTabSlide } from '@/components/useTabSlide';
+import { ProgressRing } from '@/components/ProgressRing';
+import { Entrance } from '@/components/Entrance';
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
 
 function startOfToday(): Date {
@@ -125,77 +125,6 @@ function computeNextMealId(meals: Meal[], nowMinutes: number): string | null {
 
   const upcoming = sorted.find((m) => timeToMinutes(m.time) > nowMinutes && !m.eaten);
   return upcoming?.id ?? null;
-}
-
-/** The primary device of this world: an animated ring, not a bar. */
-function ProgressRing({
-  size,
-  strokeWidth,
-  progress,
-  color,
-  track,
-  children,
-}: {
-  size: number;
-  strokeWidth: number;
-  progress: number;
-  color: string;
-  track: string;
-  children?: React.ReactNode;
-}) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const anim = useRef(new Animated.Value(Math.min(progress, 1))).current;
-
-  useEffect(() => {
-    Animated.timing(anim, { toValue: Math.min(progress, 1), duration: 500, easing: EASE_OUT, useNativeDriver: false }).start();
-  }, [progress, anim]);
-
-  const strokeDashoffset = anim.interpolate({ inputRange: [0, 1], outputRange: [circumference, 0] });
-
-  return (
-    <RNView style={{ width: size, height: size }}>
-      <Svg width={size} height={size}>
-        <Circle cx={size / 2} cy={size / 2} r={radius} stroke={track} strokeWidth={strokeWidth} fill="none" />
-        <AnimatedCircle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={color}
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={`${circumference} ${circumference}`}
-          strokeDashoffset={strokeDashoffset}
-          strokeLinecap="round"
-          rotation="-90"
-          origin={`${size / 2}, ${size / 2}`}
-        />
-      </Svg>
-      <RNView style={StyleSheet.absoluteFillObject}>
-        <RNView style={styles.ringCenter}>{children}</RNView>
-      </RNView>
-    </RNView>
-  );
-}
-
-/** One authored entrance moment: content rises and fades in on open, instead of a static snap-in. */
-function Entrance({ delay = 0, children }: { delay?: number; children: React.ReactNode }) {
-  const progress = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(progress, { toValue: 1, duration: 420, delay, easing: EASE_OUT, useNativeDriver: true }).start();
-  }, [progress, delay]);
-
-  return (
-    <Animated.View
-      style={{
-        opacity: progress,
-        transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
-      }}
-    >
-      {children}
-    </Animated.View>
-  );
 }
 
 /** The focal moment: a satisfying pop-in fill + checkmark - the one action this screen exists for. */
@@ -525,7 +454,6 @@ const styles = StyleSheet.create({
   calorieLabel: { fontSize: 14, fontWeight: '700' },
   calorieRingWrap: { alignItems: 'center', justifyContent: 'center' },
   heroGlow: { position: 'absolute', width: 108, height: 108, borderRadius: 54 },
-  ringCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   secondaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   secondaryStat: {

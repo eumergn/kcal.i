@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, View as RNView } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { GroceryItem, formatGrams, initialGroceryItems, itemCost, monthlyBudget } from '@/constants/groceryData';
 import { useTabSlide } from '@/components/useTabSlide';
+import { ProgressRing } from '@/components/ProgressRing';
 
 const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
 const STEP_GRAMS = 250;
@@ -133,15 +135,19 @@ export default function GroceryScreen() {
       <Text style={[styles.eyebrow, { color: c.secondaryText }]}>THIS MONTH</Text>
 
       <View style={[styles.budgetCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-        <Text style={[styles.budgetLabel, { color: c.secondaryText }]}>Spent</Text>
-        <View style={styles.budgetValueRow} lightColor="transparent" darkColor="transparent">
-          <Text style={[styles.budgetValue, { color: c.text }]}>{totals.spent.toFixed(2)}</Text>
-          <Text style={[styles.budgetTarget, { color: c.secondaryText }]}> / {monthlyBudget.toFixed(2)} {'EUR'}</Text>
+        <View style={{ flex: 1 }} lightColor="transparent" darkColor="transparent">
+          <Text style={[styles.budgetLabel, { color: c.secondaryText }]}>Spent</Text>
+          <View style={styles.budgetValueRow} lightColor="transparent" darkColor="transparent">
+            <Text style={[styles.budgetValue, { color: c.text }]}>{totals.spent.toFixed(2)}</Text>
+            <Text style={[styles.budgetTarget, { color: c.secondaryText }]}> / {monthlyBudget.toFixed(2)} EUR</Text>
+          </View>
+          <Text style={[styles.projectedText, { color: c.secondaryText }]}>
+            Projected {totals.projected.toFixed(2)} EUR - {totals.remaining.toFixed(2)} EUR left to spend
+          </Text>
         </View>
-        <BudgetBar pct={totals.spent / monthlyBudget} color={c.ringBudget} track={c.ringTrack} />
-        <Text style={[styles.projectedText, { color: c.secondaryText }]}>
-          Projected if you buy everything: {totals.projected.toFixed(2)} EUR · {totals.remaining.toFixed(2)} EUR left to spend
-        </Text>
+        <ProgressRing size={72} strokeWidth={6} progress={totals.spent / monthlyBudget} color={c.ringBudget} track={c.ringTrack}>
+          <FontAwesome5 name="wallet" size={22} color={c.ringBudget} />
+        </ProgressRing>
       </View>
 
       <Text style={[styles.sectionTitle, { color: c.text }]}>Grocery items</Text>
@@ -169,12 +175,15 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 120 },
   eyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 2, marginBottom: 16 },
 
-  budgetCard: { borderRadius: 22, padding: 20, marginBottom: 32, borderWidth: StyleSheet.hairlineWidth },
+  budgetCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: 22, padding: 20, marginBottom: 32, borderWidth: StyleSheet.hairlineWidth,
+  },
   budgetLabel: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
-  budgetValueRow: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 12 },
-  budgetValue: { fontFamily: 'SpaceMono', fontSize: 34, fontWeight: '700', letterSpacing: -1 },
-  budgetTarget: { fontSize: 14, fontWeight: '600' },
-  projectedText: { fontSize: 12, fontWeight: '600', marginTop: 12 },
+  budgetValueRow: { flexDirection: 'row', alignItems: 'baseline' },
+  budgetValue: { fontFamily: 'SpaceMono', fontSize: 30, fontWeight: '700', letterSpacing: -0.5 },
+  budgetTarget: { fontSize: 13, fontWeight: '600' },
+  projectedText: { fontSize: 12, fontWeight: '600', marginTop: 10, lineHeight: 17 },
   barTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: 6, borderRadius: 3 },
 
