@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, View as RNView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
@@ -179,6 +180,7 @@ function Stepper({ value, onChange, min, max, colors }: { value: number; onChang
 export default function OnboardingScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
+  const insets = useSafeAreaInsets();
   const { createProfile } = useProfile();
 
   const [step, setStep] = useState(0);
@@ -207,7 +209,7 @@ export default function OnboardingScreen() {
   const targets = useMemo(() => computeTargets(form), [form.sex, form.age, form.height_cm, form.weight_kg, form.activity_level, form.goal]);
 
   const handleNext = async () => {
-    if (!canProceed) return;
+    if (!canProceed || submitting) return;
     if (step < LAST_STEP) {
       goToStep(step + 1);
       return;
@@ -237,7 +239,10 @@ export default function OnboardingScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={{ backgroundColor: c.background }}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 24 }]}
+      >
         {step > 0 && (
           <>
             <RNView style={styles.headerRow}>
@@ -318,7 +323,18 @@ export default function OnboardingScreen() {
           <>
             <Text style={[styles.title, { color: c.text }]}>What&apos;s your current weight?</Text>
             <Text style={[styles.subtitle, { color: c.secondaryText }]}>This helps us understand your starting point.</Text>
-            <RulerPicker value={form.weight_kg} onChange={(v) => update('weight_kg', v)} min={40} max={160} unit="kg" colors={c} />
+            <RulerPicker
+              value={form.weight_kg}
+              onChange={(v) => update('weight_kg', v)}
+              min={40}
+              max={160}
+              step={0.5}
+              majorEvery={2}
+              decimals={1}
+              orientation="horizontal"
+              unit="kg"
+              colors={c}
+            />
           </>
         )}
 
@@ -326,7 +342,18 @@ export default function OnboardingScreen() {
           <>
             <Text style={[styles.title, { color: c.text }]}>What&apos;s your goal weight?</Text>
             <Text style={[styles.subtitle, { color: c.secondaryText }]}>Where do you want to be?</Text>
-            <RulerPicker value={form.goal_weight_kg} onChange={(v) => update('goal_weight_kg', v)} min={40} max={160} unit="kg" colors={c} />
+            <RulerPicker
+              value={form.goal_weight_kg}
+              onChange={(v) => update('goal_weight_kg', v)}
+              min={40}
+              max={160}
+              step={0.5}
+              majorEvery={2}
+              decimals={1}
+              orientation="horizontal"
+              unit="kg"
+              colors={c}
+            />
           </>
         )}
 
@@ -379,7 +406,13 @@ export default function OnboardingScreen() {
             <View style={styles.form} lightColor="transparent" darkColor="transparent">
               <OptionCard icon={<FontAwesome5 name="globe-europe" size={18} color={c.text} />} label="France" selected={form.country === 'FR'} onPress={() => update('country', 'FR')} colors={c} />
               <OptionCard icon={<FontAwesome5 name="globe-europe" size={18} color={c.text} />} label="Germany" selected={form.country === 'DE'} onPress={() => update('country', 'DE')} colors={c} />
-              <RulerPicker value={form.budget_amount} onChange={(v) => update('budget_amount', v)} min={20} max={800} step={10} majorEvery={5} unit="EUR" colors={c} />
+              <Text style={[styles.sublabel, { color: c.secondaryText }]}>Food budget amount (EUR)</Text>
+              <AuthTextInput
+                placeholder="e.g. 150"
+                keyboardType="decimal-pad"
+                value={form.budget_amount ? String(form.budget_amount) : ''}
+                onChangeText={(t) => update('budget_amount', parseFloat(t.replace(',', '.')) || 0)}
+              />
               <ChipSelect
                 options={[{ value: 'daily', label: 'Daily' }, { value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' }]}
                 selected={form.budget_period ? [form.budget_period] : []}

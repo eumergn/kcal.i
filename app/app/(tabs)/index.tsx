@@ -9,7 +9,19 @@
  * FORM: dark + ring-based, the user's confirmed final call.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Easing, LayoutAnimation, Pressable, ScrollView, StyleSheet, View as RNView } from 'react-native';
+import {
+  Alert,
+  Animated,
+  Dimensions,
+  Easing,
+  LayoutAnimation,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View as RNView,
+} from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -47,8 +59,17 @@ function startOfWeek(date: Date): Date {
   return d;
 }
 
-/** The earliest day the strip is allowed to select - can't view history from before the account existed. */
+/** The earliest day the strip is allowed to reach - can't view history from before the account existed. */
 const MIN_DAY_OFFSET = -Math.floor((startOfToday().getTime() - accountCreatedAt.getTime()) / 86400000);
+const MIN_WEEK_OFFSET = Math.floor(MIN_DAY_OFFSET / 7);
+const MAX_WEEK_OFFSET = 4; // a handful of weeks to plan ahead into
+
+const WEEK_OFFSETS = Array.from({ length: MAX_WEEK_OFFSET - MIN_WEEK_OFFSET + 1 }, (_, i) => MIN_WEEK_OFFSET + i);
+const CURRENT_WEEK_INDEX = WEEK_OFFSETS.indexOf(0);
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const CONTENT_PADDING = 20;
+const PAGE_WIDTH = SCREEN_WIDTH - CONTENT_PADDING * 2;
 
 type WeekDay = {
   offset: number;
@@ -60,12 +81,13 @@ type WeekDay = {
 };
 
 /**
- * The current Sun-Sat week, one cell per day. Only "today" (offset 0) has real
- * tracked data - one sample day, no backend yet - so every other cell's ring stays
- * an empty track rather than showing a fabricated completion percentage.
+ * One Sun-Sat week, `weekOffset` weeks away from the current week. Only "today"
+ * (offset 0) has real tracked data - one sample day, no backend yet - so every other
+ * cell's ring stays an empty track rather than showing a fabricated completion
+ * percentage.
  */
-function buildWeekDays(today: Date): WeekDay[] {
-  const weekStart = startOfWeek(today);
+function buildWeekDays(today: Date, weekOffset: number): WeekDay[] {
+  const weekStart = addDays(startOfWeek(today), weekOffset * 7);
   return Array.from({ length: 7 }, (_, i) => {
     const date = addDays(weekStart, i);
     const offset = Math.round((date.getTime() - today.getTime()) / 86400000);
@@ -278,10 +300,14 @@ export default function HomeScreen() {
   const router = useRouter();
   const { meals, toggleEaten, catalog } = usePlan();
   const [selectedOffset, setSelectedOffset] = useState(0);
-  const isCurrentDay = selectedOffset === 0;
   const slideStyle = useTabSlide('index');
+  const today = useMemo(() => startOfToday(), []);
 
-  const weekDays = useMemo(() => buildWeekDays(startOfToday()), []);
+  const handleWeekPageEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = Math.round(e.nativeEvent.contentOffset.x / PAGE_WIDTH);
+    const clamped = Math.max(0, Math.min(WEEK_OFFSETS.length - 1, index));
+    if (WEEK_OFFSETS[clamped] === 0) setSelectedOffset(0);
+  };
 
   const totals = useMemo(() => {
     return meals
@@ -353,48 +379,44 @@ export default function HomeScreen() {
   return (
     <Animated.View style={[{ flex: 1 }, slideStyle]}>
     <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.content}>
-      <View style={styles.weekStrip} lightColor="transparent" darkColor="transparent">
-        {weekDays.map((day) => {
-          const isSelected = day.offset === selectedOffset;
-          const dayProgress = day.isToday ? Math.min(totals.calories / targets.calories, 1) : 0;
-          return (
-            <Pressable
-              key={day.offset}
-              onPress={() => day.enabled && setSelectedOffset(day.offset)}
-              disabled={!day.enabled}
-              style={[styles.dayCell, { opacity: day.enabled ? 1 : 0.3 }]}
-              accessibilityLabel={`${day.letter} ${day.dateNum}${day.isToday ? ', today' : ''}`}
-            >
-              <Text style={[styles.dayLetter, { color: c.secondaryText }]}>{day.letter}</Text>
-              <ProgressRing
-                size={40}
-                strokeWidth={2}
-                progress={dayProgress}
-                color={isSelected ? c.text : c.ringTrack}
-                track={c.ringTrack}
-              >
-                <Text style={[styles.dayNum, { color: isSelected ? c.text : c.secondaryText }]}>{day.dateNum}</Text>
-              </ProgressRing>
-            </Pressable>
-          );
-        })}
-      </View>
+      <ScrollView
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        style={{ width: PAGE_WIDTH, marginBottom: 24 }}
+        contentOffset={{ x: CURRENT_WEEK_INDEX * PAGE_WIDTH, y: 0 }}
+        onMomentumScrollEnd={handleWeekPageEnd}
+      >
+        {WEEK_OFFSETS.map((weekOffset) => (
+          <View key={weekOffset} style={[styles.weekStrip, { width: PAGE_WIDTH }]} lightColor="transparent" darkColor="transparent">
+            {buildWeekDays(today, weekOffset).map((day) => {
+              const isSelected = day.offset === selectedOffset;
+              const dayProgress = day.isToday ? Math.min(totals.calories / targets.calories, 1) : 0;
+              return (
+                <Pressable
+                  key={day.offset}
+                  onPress={() => day.enabled && setSelectedOffset(day.offset)}
+                  disabled={!day.enabled}
+                  style={[styles.dayCell, { opacity: day.enabled ? 1 : 0.3 }]}
+                  accessibilityLabel={`${day.letter} ${day.dateNum}${day.isToday ? ', today' : ''}`}
+                >
+                  <Text style={[styles.dayLetter, { color: c.secondaryText }]}>{day.letter}</Text>
+                  <ProgressRing
+                    size={40}
+                    strokeWidth={2}
+                    progress={dayProgress}
+                    color={isSelected ? c.text : c.ringTrack}
+                    track={c.ringTrack}
+                  >
+                    <Text style={[styles.dayNum, { color: isSelected ? c.text : c.secondaryText }]}>{day.dateNum}</Text>
+                  </ProgressRing>
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
+      </ScrollView>
 
-      {!isCurrentDay && (
-        <View style={[styles.emptyStateCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-          <FontAwesome name="calendar-o" size={26} color={c.secondaryText} />
-          <Text style={[styles.emptyStateTitle, { color: c.text }]}>No data for this day</Text>
-          <Text style={[styles.emptyStateSubtitle, { color: c.secondaryText }]}>
-            Historical and future days will show up here once there&apos;s real tracked data to look back on.
-          </Text>
-          <Pressable onPress={() => setSelectedOffset(0)} style={[styles.backToTodayButton, { backgroundColor: c.cardDivider }]}>
-            <Text style={[styles.backToTodayText, { color: c.text }]}>Back to today</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {isCurrentDay && (
-      <>
       <Entrance>
         <View style={[styles.calorieCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
           <View style={styles.calorieTextCol} lightColor="transparent" darkColor="transparent">
@@ -470,8 +492,6 @@ export default function HomeScreen() {
           ))}
         </View>
       </Entrance>
-      </>
-      )}
     </ScrollView>
     </Animated.View>
   );
@@ -484,12 +504,6 @@ const styles = StyleSheet.create({
   dayCell: { alignItems: 'center', gap: 6 },
   dayLetter: { fontSize: 11, fontWeight: '600' },
   dayNum: { fontSize: 13, fontWeight: '700' },
-
-  emptyStateCard: { borderRadius: 22, padding: 28, alignItems: 'center', gap: 10, borderWidth: StyleSheet.hairlineWidth },
-  emptyStateTitle: { fontSize: 16, fontWeight: '700', marginTop: 4 },
-  emptyStateSubtitle: { fontSize: 13, fontWeight: '600', textAlign: 'center', lineHeight: 19 },
-  backToTodayButton: { borderRadius: 14, paddingHorizontal: 20, paddingVertical: 12, marginTop: 8 },
-  backToTodayText: { fontSize: 13, fontWeight: '700' },
 
   calorieCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

@@ -6,7 +6,8 @@ import { Tabs, useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
-import { ThemeToggleButton } from '@/components/ThemeToggleButton';
+import { CustomTabBar } from '@/components/CustomTabBar';
+import { StreakBadge } from '@/components/StreakBadge';
 import { ScanTabButton } from '@/components/ScanTabButton';
 import { Logo } from '@/components/Logo';
 
@@ -39,49 +40,21 @@ function TabBarIcon({
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const c = Colors[colorScheme ?? 'light'];
   const router = useRouter();
 
   return (
     <Tabs
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: c.tabIconSelected,
-        tabBarInactiveTintColor: c.tabIconDefault,
-        tabBarShowLabel: false,
-        // Floating pill bar, detached from the bottom edge rather than flush - a
-        // full border (not just borderTop) since it's fully rounded on all sides.
-        tabBarStyle: {
-          position: 'absolute',
-          left: 16,
-          right: 16,
-          bottom: 24,
-          height: 64,
-          borderRadius: 24,
-          backgroundColor: c.card,
-          borderWidth: 1,
-          borderColor: c.cardDivider,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-          elevation: 8,
-        },
-        // Force every tab (including the custom scan button) to the same width slot -
-        // without this, a custom tabBarButton doesn't get the same flex distribution
-        // as the default icon+label buttons, and the FAB ends up visibly off-center.
-        // Explicit centering on both axes: with tabBarShowLabel false, the default
-        // item still reserves label padding that pushes the icon off vertical center.
-        tabBarItemStyle: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-        tabBarIconStyle: { marginTop: 0, marginBottom: 0 },
         headerShown: useClientOnlyValue(false, true),
-        headerTitleAlign: 'center',
+        headerTitle: () => null,
+        headerShadowVisible: false,
         headerLeft: () => (
           <View style={{ marginLeft: 16 }}>
             <Logo layout="stacked" size="small" />
           </View>
         ),
-        headerRight: () => <ThemeToggleButton />,
+        headerRight: () => <StreakBadge />,
       }}>
       <Tabs.Screen
         name="index"

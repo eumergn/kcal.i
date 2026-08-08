@@ -64,11 +64,18 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   const createProfile = async (profile: OnboardingProfile): Promise<{ error: string | null }> => {
     if (!session) return { error: 'No active session.' };
-    const { error } = await supabase.from('user_profile').insert({
-      id: session.user.id,
-      currency: 'EUR', // both launch countries (FR/DE) use EUR
-      ...profile,
-    });
+    // upsert, not insert: a stale row from an earlier attempt (or a double-tap on the
+    // final "Create my plan" button before the button had a chance to disable) would
+    // otherwise fail with a duplicate primary key instead of just settling on the
+    // latest answers.
+    const { error } = await supabase.from('user_profile').upsert(
+      {
+        id: session.user.id,
+        currency: 'EUR', // both launch countries (FR/DE) use EUR
+        ...profile,
+      },
+      { onConflict: 'id' },
+    );
     if (error) return { error: error.message };
     setStatus('present');
     return { error: null };

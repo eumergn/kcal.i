@@ -4,15 +4,15 @@ import { NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, View a
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 
-const ITEM_HEIGHT = 32;
-const VISIBLE_HEIGHT = 208;
-const PADDING = VISIBLE_HEIGHT / 2 - ITEM_HEIGHT / 2;
+const ITEM_SIZE = 32;
+const VISIBLE_SIZE = 208;
+const PADDING = VISIBLE_SIZE / 2 - ITEM_SIZE / 2;
 
 /**
- * A vertical scrubber for a single numeric value (height, weight, age) - a snapping
- * ScrollView rather than a hand-rolled drag gesture, since it gets correct momentum
- * and snap behavior for free from the platform instead of reimplementing physics.
- * Every step gets a tick; every 5th step is labeled, matching a real ruler.
+ * A scrubber for a single numeric value (height, weight, age, ...) - a snapping
+ * ScrollView rather than a hand-rolled drag gesture, so momentum/snap come from the
+ * platform for free. Value updates live as you drag (onScroll, not just on release),
+ * so the displayed number always matches exactly where your finger is.
  */
 export function RulerPicker({
   value,
@@ -21,6 +21,8 @@ export function RulerPicker({
   max,
   step = 1,
   majorEvery = 5,
+  decimals = 0,
+  orientation = 'vertical',
   unit,
   colors,
 }: {
@@ -30,64 +32,83 @@ export function RulerPicker({
   max: number;
   step?: number;
   majorEvery?: number;
+  decimals?: number;
+  orientation?: 'vertical' | 'horizontal';
   unit: string;
   colors: (typeof Colors)['light'];
 }) {
   const items = useMemo(() => {
     const arr: number[] = [];
-    for (let v = min; v <= max + 1e-6; v += step) arr.push(Math.round(v * 100) / 100);
+    const count = Math.round((max - min) / step);
+    for (let i = 0; i <= count; i++) arr.push(Math.round((min + i * step) * 1000) / 1000);
     return arr;
   }, [min, max, step]);
 
-  const initialIndex = Math.max(0, Math.min(items.length - 1, Math.round((value - min) / step)));
+  const closestIndex = (v: number) => Math.round((v - min) / step);
+  const initialIndex = Math.max(0, Math.min(items.length - 1, closestIndex(value)));
   const lastIndex = useRef(initialIndex);
 
-  const handleMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const index = Math.max(0, Math.min(items.length - 1, Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT)));
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offset = orientation === 'vertical' ? e.nativeEvent.contentOffset.y : e.nativeEvent.contentOffset.x;
+    const index = Math.max(0, Math.min(items.length - 1, Math.round(offset / ITEM_SIZE)));
     if (index === lastIndex.current) return;
     lastIndex.current = index;
     onChange(items[index]);
   };
 
+  const isVertical = orientation === 'vertical';
+
   return (
     <RNView>
       <Text style={styles.value}>
-        <Text style={{ color: colors.text }}>{value}</Text>
+        <Text style={{ color: colors.text }}>{value.toFixed(decimals)}</Text>
         <Text style={{ color: colors.secondaryText, fontWeight: '600' }}> {unit}</Text>
       </Text>
-      <RNView style={{ height: VISIBLE_HEIGHT, justifyContent: 'center' }}>
-        <RNView pointerEvents="none" style={[styles.centerLine, { backgroundColor: colors.text }]} />
+      <RNView style={isVertical ? { height: VISIBLE_SIZE, justifyContent: 'center' } : { height: 72, justifyContent: 'center' }}>
+        <RNView
+          pointerEvents="none"
+          style={isVertical ? [styles.centerLineH, { backgroundColor: colors.text }] : [styles.centerLineV, { backgroundColor: colors.text }]}
+        />
         <ScrollView
+          horizontal={!isVertical}
           showsVerticalScrollIndicator={false}
-          snapToInterval={ITEM_HEIGHT}
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={ITEM_SIZE}
           decelerationRate="fast"
-          contentContainerStyle={{ paddingVertical: PADDING }}
-          contentOffset={{ x: 0, y: initialIndex * ITEM_HEIGHT }}
-          onMomentumScrollEnd={handleMomentumEnd}
+          scrollEventThrottle={16}
+          contentContainerStyle={
+            isVertical ? { paddingVertical: PADDING } : { paddingHorizontal: PADDING, flexDirection: 'row', alignItems: 'flex-start' }
+          }
+          contentOffset={isVertical ? { x: 0, y: initialIndex * ITEM_SIZE } : { x: initialIndex * ITEM_SIZE, y: 0 }}
+          onScroll={handleScroll}
         >
           {items.map((v, i) => {
             const isMajor = i % majorEvery === 0;
             const isSelected = v === value;
-            return (
-              <RNView key={v} style={styles.tickRow}>
-                <RNView style={styles.tickMarkSlot}>
-                  <RNView
-                    style={[
-                      styles.tickMark,
-                      {
-                        width: isMajor ? 16 : 8,
-                        backgroundColor: isSelected ? colors.text : colors.cardDivider,
-                      },
-                    ]}
-                  />
+            const label = v.toFixed(decimals);
+            return isVertical ? (
+              <RNView key={v} style={styles.tickRowH}>
+                <RNView style={styles.tickMarkSlotH}>
+                  <RNView style={[styles.tickMarkH, { width: isMajor ? 16 : 8, backgroundColor: isSelected ? colors.text : colors.cardDivider }]} />
                 </RNView>
-                <RNView style={styles.tickLabelSlot}>
+                <RNView style={styles.tickLabelSlotH}>
                   {isMajor && (
                     <Text style={[styles.tickLabel, { color: isSelected ? colors.text : colors.secondaryText, fontWeight: isSelected ? '800' : '600' }]}>
-                      {v}
+                      {label}
                     </Text>
                   )}
                 </RNView>
+              </RNView>
+            ) : (
+              <RNView key={v} style={styles.tickColV}>
+                <RNView style={styles.tickMarkSlotV}>
+                  <RNView style={[styles.tickMarkV, { height: isMajor ? 16 : 8, backgroundColor: isSelected ? colors.text : colors.cardDivider }]} />
+                </RNView>
+                {isMajor && (
+                  <Text style={[styles.tickLabel, { color: isSelected ? colors.text : colors.secondaryText, fontWeight: isSelected ? '800' : '600', marginTop: 6 }]}>
+                    {label}
+                  </Text>
+                )}
               </RNView>
             );
           })}
@@ -99,10 +120,19 @@ export function RulerPicker({
 
 const styles = StyleSheet.create({
   value: { fontFamily: 'SpaceMono', fontSize: 34, fontWeight: '700', letterSpacing: -1, textAlign: 'center', marginBottom: 12 },
-  centerLine: { position: 'absolute', left: '30%', right: '30%', height: 2, borderRadius: 1, opacity: 0.9 },
-  tickRow: { height: ITEM_HEIGHT, flexDirection: 'row', alignItems: 'center', alignSelf: 'center' },
-  tickMarkSlot: { width: 20, alignItems: 'flex-end' },
-  tickMark: { height: 2, borderRadius: 1 },
-  tickLabelSlot: { width: 40, marginLeft: 12, justifyContent: 'center' },
+
+  // Vertical ruler (ticks stacked top-to-bottom, scrolled vertically)
+  centerLineH: { position: 'absolute', left: '30%', right: '30%', height: 2, borderRadius: 1, opacity: 0.9 },
+  tickRowH: { height: ITEM_SIZE, flexDirection: 'row', alignItems: 'center', alignSelf: 'center' },
+  tickMarkSlotH: { width: 20, alignItems: 'flex-end' },
+  tickMarkH: { height: 2, borderRadius: 1 },
+  tickLabelSlotH: { width: 40, marginLeft: 12, justifyContent: 'center' },
+
+  // Horizontal ruler (ticks side-by-side, scrolled horizontally)
+  centerLineV: { position: 'absolute', top: '20%', bottom: '20%', width: 2, borderRadius: 1, opacity: 0.9, alignSelf: 'center' },
+  tickColV: { width: ITEM_SIZE, alignItems: 'center' },
+  tickMarkSlotV: { height: 20, justifyContent: 'flex-end' },
+  tickMarkV: { width: 2, borderRadius: 1 },
+
   tickLabel: { fontSize: 13 },
 });
