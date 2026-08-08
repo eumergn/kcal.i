@@ -13,6 +13,7 @@ import { PlanProvider } from '@/context/PlanContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ProfileProvider, useProfile } from '@/context/ProfileContext';
 import { WeightProvider } from '@/context/WeightContext';
+import { SettingsProvider } from '@/context/SettingsContext';
 import { Text, View } from '@/components/Themed';
 
 export {
@@ -55,7 +56,9 @@ export default function RootLayout() {
         <ProfileProvider>
           <PlanProvider>
             <WeightProvider>
-              <RootLayoutNav />
+              <SettingsProvider>
+                <RootLayoutNav />
+              </SettingsProvider>
             </WeightProvider>
           </PlanProvider>
         </ProfileProvider>

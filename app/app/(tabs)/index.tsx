@@ -36,28 +36,9 @@ import { accountCreatedAt } from '@/constants/account';
 import { useTabSlide } from '@/components/useTabSlide';
 import { ProgressRing } from '@/components/ProgressRing';
 import { Entrance } from '@/components/Entrance';
+import { startOfToday, buildWeekDays } from '@/lib/dates';
 
 const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
-
-function startOfToday(): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function addDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-function startOfWeek(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  const day = d.getDay(); // 0=Sun..6=Sat
-  d.setDate(d.getDate() - day); // Sunday-start week, matching the reference strip
-  return d;
-}
 
 /** The earliest day the strip is allowed to reach - can't view history from before the account existed. */
 const MIN_DAY_OFFSET = -Math.floor((startOfToday().getTime() - accountCreatedAt.getTime()) / 86400000);
@@ -70,37 +51,6 @@ const CURRENT_WEEK_INDEX = WEEK_OFFSETS.indexOf(0);
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CONTENT_PADDING = 20;
 const PAGE_WIDTH = SCREEN_WIDTH - CONTENT_PADDING * 2;
-
-type WeekDay = {
-  offset: number;
-  date: Date;
-  letter: string;
-  dateNum: number;
-  isToday: boolean;
-  enabled: boolean;
-};
-
-/**
- * One Sun-Sat week, `weekOffset` weeks away from the current week. Only "today"
- * (offset 0) has real tracked data - one sample day, no backend yet - so every other
- * cell's ring stays an empty track rather than showing a fabricated completion
- * percentage.
- */
-function buildWeekDays(today: Date, weekOffset: number): WeekDay[] {
-  const weekStart = addDays(startOfWeek(today), weekOffset * 7);
-  return Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(weekStart, i);
-    const offset = Math.round((date.getTime() - today.getTime()) / 86400000);
-    return {
-      offset,
-      date,
-      letter: date.toLocaleDateString('en-US', { weekday: 'short' }),
-      dateNum: date.getDate(),
-      isToday: offset === 0,
-      enabled: offset >= MIN_DAY_OFFSET,
-    };
-  });
-}
 
 /** "08:00" -> 480 (minutes since midnight), for comparing against the device clock. */
 function timeToMinutes(time: string): number {
@@ -324,7 +274,7 @@ export default function HomeScreen() {
       >
         {WEEK_OFFSETS.map((weekOffset) => (
           <View key={weekOffset} style={[styles.weekStrip, { width: PAGE_WIDTH }]} lightColor="transparent" darkColor="transparent">
-            {buildWeekDays(today, weekOffset).map((day) => {
+            {buildWeekDays(today, weekOffset, MIN_DAY_OFFSET).map((day) => {
               const isSelected = day.offset === selectedOffset;
               const dayProgress = day.isToday ? Math.min(totals.calories / targets.calories, 1) : 0;
               return (
@@ -374,8 +324,8 @@ export default function HomeScreen() {
                 },
               ]}
             />
-            <ProgressRing size={88} strokeWidth={6} progress={displayTotals.calories / targets.calories} color={c.ringCalories} track={c.ringTrack}>
-              <FontAwesome5 name="fire" size={26} color={c.ringCalories} />
+            <ProgressRing size={68} strokeWidth={5} progress={displayTotals.calories / targets.calories} color={c.ringCalories} track={c.ringTrack}>
+              <FontAwesome5 name="fire" size={20} color={c.ringCalories} />
             </ProgressRing>
           </View>
         </View>
@@ -447,13 +397,13 @@ const styles = StyleSheet.create({
 
   calorieCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderRadius: 24, borderWidth: StyleSheet.hairlineWidth, padding: 24, marginBottom: 16,
+    borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 18, marginBottom: 16,
   },
-  calorieTextCol: { flex: 1, gap: 6, paddingRight: 12 },
-  calorieValue: { fontFamily: 'SpaceMono', fontSize: 30, fontWeight: '700', letterSpacing: -0.5 },
-  calorieLabel: { fontSize: 14, fontWeight: '700' },
+  calorieTextCol: { flex: 1, gap: 4, paddingRight: 10 },
+  calorieValue: { fontFamily: 'SpaceMono', fontSize: 22, fontWeight: '700', letterSpacing: -0.5 },
+  calorieLabel: { fontSize: 12, fontWeight: '700' },
   calorieRingWrap: { alignItems: 'center', justifyContent: 'center' },
-  heroGlow: { position: 'absolute', width: 108, height: 108, borderRadius: 54 },
+  heroGlow: { position: 'absolute', width: 84, height: 84, borderRadius: 42 },
 
   secondaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   secondaryStat: {

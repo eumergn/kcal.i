@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, TextInput, View as RNView } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
@@ -11,11 +10,12 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { useTabSlide } from '@/components/useTabSlide';
 import { ProgressRing } from '@/components/ProgressRing';
 import { Entrance } from '@/components/Entrance';
-import { usePlan } from '@/context/PlanContext';
-import { mealTotals, targets } from '@/constants/planData';
 import { useWeight, WeightEntry } from '@/context/WeightContext';
+import { useSettings } from '@/context/SettingsContext';
+import { accountCreatedAt } from '@/constants/account';
+import { startOfToday, buildMonthDays } from '@/lib/dates';
 
-const WATER_TARGET_CUPS = 8;
+const WATER_STEP_LITERS = 0.25;
 
 /** A hand-drawn line, not a charting library - same "own the primitive" approach as
  * ProgressRing. Only renders once there are at least two points to connect. */
@@ -45,16 +45,20 @@ function WeightTrendChart({ entries, width, height, color }: { entries: WeightEn
   );
 }
 
+/** The earliest day the month grid is allowed to show as "in progress" - matches the
+ * same account-creation floor Home's week strip uses. */
+const MIN_DAY_OFFSET = -Math.floor((startOfToday().getTime() - accountCreatedAt.getTime()) / 86400000);
+
 export default function TrackScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
   const slideStyle = useTabSlide('track');
-  const { meals, catalog } = usePlan();
   const { entries, goalWeightKg, logWeight } = useWeight();
+  const { waterGoalLiters } = useSettings();
 
   const [chartWidth, setChartWidth] = useState(0);
   const [weightInput, setWeightInput] = useState('');
-  const [cupsToday, setCupsToday] = useState(0);
+  const [litersToday, setLitersToday] = useState(0);
 
   const latestEntry = entries[entries.length - 1];
   const firstEntry = entries[0];
@@ -72,15 +76,11 @@ export default function TrackScreen() {
     setWeightInput('');
   };
 
-  const totals = meals
-    .filter((m) => m.eaten)
-    .reduce(
-      (acc, m) => {
-        const t = mealTotals(m.items, catalog);
-        return { calories: acc.calories + t.calories, proteinG: acc.proteinG + t.proteinG };
-      },
-      { calories: 0, proteinG: 0 },
-    );
+  const today = useMemo(() => startOfToday(), []);
+  const monthDays = useMemo(() => buildMonthDays(today, MIN_DAY_OFFSET), [today]);
+  const monthLabel = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  // Only today has a real completion record - see Home's week strip for the same rule.
+  const todayHitGoal = litersToday >= waterGoalLiters;
 
   return (
     <Animated.View style={[{ flex: 1 }, slideStyle]}>
@@ -131,47 +131,54 @@ export default function TrackScreen() {
         </Entrance>
 
         <Entrance delay={80}>
-          <Text style={[styles.eyebrow, { color: c.secondaryText, marginTop: 32 }]}>TODAY</Text>
-          <View style={styles.recapRow} lightColor="transparent" darkColor="transparent">
-            <View style={[styles.recapCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-              <ProgressRing size={56} strokeWidth={5} progress={totals.calories / targets.calories} color={c.ringCalories} track={c.ringTrack}>
-                <FontAwesome5 name="fire" size={18} color={c.ringCalories} />
-              </ProgressRing>
-              <Text style={[styles.recapValue, { color: c.text }]}>{Math.round(totals.calories)}<Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.calories}</Text></Text>
-              <Text style={[styles.recapLabel, { color: c.secondaryText }]}>Calories</Text>
+          <Text style={[styles.eyebrow, { color: c.secondaryText, marginTop: 32 }]}>{monthLabel.toUpperCase()}</Text>
+          <View style={[styles.monthCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
+            <View style={styles.monthGrid} lightColor="transparent" darkColor="transparent">
+              {monthDays.map((day) => (
+                <RNView key={day.offset} style={[styles.monthCell, { opacity: day.enabled ? 1 : 0.3 }]}>
+                  <ProgressRing
+                    size={30}
+                    strokeWidth={2}
+                    progress={day.isToday && todayHitGoal ? 1 : 0}
+                    color={day.isToday ? c.text : c.ringTrack}
+                    track={c.ringTrack}
+                  >
+                    <Text style={[styles.monthDayNum, { color: day.isToday ? c.text : c.secondaryText }]}>{day.dateNum}</Text>
+                  </ProgressRing>
+                </RNView>
+              ))}
             </View>
-            <View style={[styles.recapCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-              <ProgressRing size={56} strokeWidth={5} progress={totals.proteinG / targets.proteinG} color={c.ringProtein} track={c.ringTrack}>
-                <MaterialCommunityIcons name="food-drumstick" size={18} color={c.ringProtein} />
-              </ProgressRing>
-              <Text style={[styles.recapValue, { color: c.text }]}>{Math.round(totals.proteinG)}<Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.proteinG}g</Text></Text>
-              <Text style={[styles.recapLabel, { color: c.secondaryText }]}>Protein</Text>
-            </View>
+            <Text style={[styles.chartHint, { color: c.secondaryText, marginTop: 14 }]}>
+              Only today has a real record so far - the rest of the month fills in as you go.
+            </Text>
           </View>
         </Entrance>
 
         <Entrance delay={140}>
           <Text style={[styles.eyebrow, { color: c.secondaryText, marginTop: 32 }]}>WATER</Text>
           <View style={[styles.waterCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-            <ProgressRing size={64} strokeWidth={5} progress={cupsToday / WATER_TARGET_CUPS} color={c.ringCarbs} track={c.ringTrack}>
+            <ProgressRing size={64} strokeWidth={5} progress={litersToday / waterGoalLiters} color={c.ringCarbs} track={c.ringTrack}>
               <FontAwesome5 name="tint" size={20} color={c.ringCarbs} />
             </ProgressRing>
             <View style={{ flex: 1 }} lightColor="transparent" darkColor="transparent">
               <Text style={styles.waterValue}>
-                <Text style={{ color: c.text }}>{cupsToday}</Text>
-                <Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{WATER_TARGET_CUPS} cups</Text>
+                <Text style={{ color: c.text }}>{litersToday.toFixed(2)}</Text>
+                <Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{waterGoalLiters.toFixed(1)} L</Text>
               </Text>
               <Text style={[styles.weightLabel, { color: c.secondaryText }]}>Water today</Text>
             </View>
             <RNView style={styles.waterButtons}>
               <Pressable
-                onPress={() => setCupsToday((n) => Math.max(0, n - 1))}
-                disabled={cupsToday <= 0}
-                style={[styles.stepperButton, { backgroundColor: c.cardDivider, opacity: cupsToday <= 0 ? 0.4 : 1 }]}
+                onPress={() => setLitersToday((n) => Math.max(0, Math.round((n - WATER_STEP_LITERS) * 100) / 100))}
+                disabled={litersToday <= 0}
+                style={[styles.stepperButton, { backgroundColor: c.cardDivider, opacity: litersToday <= 0 ? 0.4 : 1 }]}
               >
                 <FontAwesome name="minus" size={13} color={c.text} />
               </Pressable>
-              <Pressable onPress={() => setCupsToday((n) => n + 1)} style={[styles.stepperButton, { backgroundColor: c.cardDivider }]}>
+              <Pressable
+                onPress={() => setLitersToday((n) => Math.round((n + WATER_STEP_LITERS) * 100) / 100)}
+                style={[styles.stepperButton, { backgroundColor: c.cardDivider }]}
+              >
                 <FontAwesome name="plus" size={13} color={c.text} />
               </Pressable>
             </RNView>
@@ -203,10 +210,10 @@ const styles = StyleSheet.create({
   logButton: { borderRadius: 14, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
   logButtonText: { fontSize: 13, fontWeight: '700' },
 
-  recapRow: { flexDirection: 'row', gap: 12 },
-  recapCard: { flex: 1, alignItems: 'center', gap: 8, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, paddingVertical: 18 },
-  recapValue: { fontFamily: 'SpaceMono', fontSize: 14, fontWeight: '700' },
-  recapLabel: { fontSize: 11, fontWeight: '600' },
+  monthCard: { borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 20 },
+  monthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  monthCell: { alignItems: 'center', justifyContent: 'center' },
+  monthDayNum: { fontSize: 11, fontWeight: '700' },
 
   waterCard: { flexDirection: 'row', alignItems: 'center', gap: 16, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 20 },
   waterValue: { fontFamily: 'SpaceMono', fontSize: 22, fontWeight: '700' },

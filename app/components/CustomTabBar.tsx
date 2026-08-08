@@ -43,7 +43,11 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
           <Pressable
             key={route.key}
             onPress={onPress}
-            style={styles.item}
+            // The default Android ripple fills the whole rectangular touch target with
+            // square corners, clashing with the circular focused-state background - it's
+            // suppressed in favor of a plain opacity dip, which needs no shape of its own.
+            android_ripple={{ color: 'transparent' }}
+            style={({ pressed }) => [styles.item, { opacity: pressed ? 0.6 : 1 }]}
             accessibilityRole="button"
             accessibilityState={isFocused ? { selected: true } : {}}
             accessibilityLabel={options.title}

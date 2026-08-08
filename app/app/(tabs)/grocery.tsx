@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, View as RNView } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, TextInput, View as RNView } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
@@ -10,24 +11,20 @@ import { GroceryItem, formatGrams, initialGroceryItems, itemCost, monthlyBudget 
 import { useTabSlide } from '@/components/useTabSlide';
 import { ProgressRing } from '@/components/ProgressRing';
 
-const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
 const STEP_GRAMS = 250;
 
-function BudgetBar({ pct, color, track }: { pct: number; color: string; track: string }) {
-  const widthAnim = useRef(new Animated.Value(Math.min(pct, 1))).current;
-
-  useEffect(() => {
-    Animated.timing(widthAnim, { toValue: Math.min(pct, 1), duration: 420, easing: EASE_OUT, useNativeDriver: false }).start();
-  }, [pct, widthAnim]);
-
-  const width = widthAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
-
-  return (
-    <RNView style={[styles.barTrack, { backgroundColor: track }]}>
-      <Animated.View style={[styles.barFill, { width, backgroundColor: color }]} />
-    </RNView>
-  );
-}
+const ITEM_ICONS: Record<string, (color: string) => React.ReactNode> = {
+  'chicken-breast': (col) => <FontAwesome5 name="drumstick-bite" size={16} color={col} />,
+  oats: (col) => <MaterialCommunityIcons name="bowl-mix" size={17} color={col} />,
+  carrots: (col) => <FontAwesome5 name="carrot" size={16} color={col} />,
+  'tuna-canned': (col) => <FontAwesome5 name="fish" size={16} color={col} />,
+  bread: (col) => <FontAwesome5 name="bread-slice" size={16} color={col} />,
+  'ground-beef': (col) => <FontAwesome5 name="hamburger" size={16} color={col} />,
+  rice: (col) => <MaterialCommunityIcons name="rice" size={17} color={col} />,
+  eggs: (col) => <FontAwesome5 name="egg" size={16} color={col} />,
+  pasta: (col) => <MaterialCommunityIcons name="pasta" size={17} color={col} />,
+};
+const defaultIcon = (col: string) => <FontAwesome5 name="shopping-basket" size={15} color={col} />;
 
 function GroceryRow({
   item,
@@ -54,49 +51,54 @@ function GroceryRow({
 
   const pct = item.neededGrams > 0 ? item.purchasedGrams / item.neededGrams : 0;
   const remaining = Math.max(item.neededGrams - item.purchasedGrams, 0);
+  const renderIcon = ITEM_ICONS[item.id] ?? defaultIcon;
 
   return (
     <View style={[styles.itemRow, { borderTopColor: colors.cardDivider }]} lightColor="transparent" darkColor="transparent">
-      <View style={styles.itemHeaderRow} lightColor="transparent" darkColor="transparent">
-        <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
-        <View style={styles.priceInputWrap} lightColor="transparent" darkColor="transparent">
-          <Text style={[styles.priceCurrency, { color: colors.secondaryText }]}>€</Text>
-          <TextInput
-            value={priceText}
-            onChangeText={setPriceText}
-            onBlur={commitPrice}
-            onSubmitEditing={commitPrice}
-            keyboardType="decimal-pad"
-            style={[styles.priceInput, { color: colors.text, borderBottomColor: colors.cardDivider }]}
-          />
-          <Text style={[styles.priceSuffix, { color: colors.secondaryText }]}>/100g</Text>
+      <ProgressRing size={44} strokeWidth={3} progress={pct} color={colors.ringBudget} track={colors.ringTrack}>
+        {renderIcon(colors.ringBudget)}
+      </ProgressRing>
+
+      <View style={{ flex: 1, gap: 8 }} lightColor="transparent" darkColor="transparent">
+        <View style={styles.itemHeaderRow} lightColor="transparent" darkColor="transparent">
+          <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
+          <View style={styles.priceInputWrap} lightColor="transparent" darkColor="transparent">
+            <Text style={[styles.priceCurrency, { color: colors.secondaryText }]}>€</Text>
+            <TextInput
+              value={priceText}
+              onChangeText={setPriceText}
+              onBlur={commitPrice}
+              onSubmitEditing={commitPrice}
+              keyboardType="decimal-pad"
+              style={[styles.priceInput, { color: colors.text, borderBottomColor: colors.cardDivider }]}
+            />
+            <Text style={[styles.priceSuffix, { color: colors.secondaryText }]}>/100g</Text>
+          </View>
         </View>
-      </View>
 
-      <BudgetBar pct={pct} color={colors.ringBudget} track={colors.ringTrack} />
-
-      <View style={styles.itemFooterRow} lightColor="transparent" darkColor="transparent">
-        <Text style={[styles.itemMeta, { color: colors.secondaryText }]}>
-          Bought {formatGrams(item.purchasedGrams)} / {formatGrams(item.neededGrams)}
-          {remaining > 0 ? ` · ${formatGrams(remaining)} left` : ' · done'}
-        </Text>
-        <View style={styles.stepperRow} lightColor="transparent" darkColor="transparent">
-          <Pressable
-            onPress={() => onAdjustPurchased(item.id, -STEP_GRAMS)}
-            hitSlop={8}
-            style={[styles.stepperButton, { backgroundColor: colors.cardDivider }]}
-            accessibilityLabel={`Decrease bought amount of ${item.name}`}
-          >
-            <FontAwesome name="minus" size={11} color={colors.text} />
-          </Pressable>
-          <Pressable
-            onPress={() => onAdjustPurchased(item.id, STEP_GRAMS)}
-            hitSlop={8}
-            style={[styles.stepperButton, { backgroundColor: colors.cardDivider }]}
-            accessibilityLabel={`Increase bought amount of ${item.name}`}
-          >
-            <FontAwesome name="plus" size={11} color={colors.text} />
-          </Pressable>
+        <View style={styles.itemFooterRow} lightColor="transparent" darkColor="transparent">
+          <Text style={[styles.itemMeta, { color: colors.secondaryText }]}>
+            Bought {formatGrams(item.purchasedGrams)} / {formatGrams(item.neededGrams)}
+            {remaining > 0 ? `, ${formatGrams(remaining)} left` : ', done'}
+          </Text>
+          <View style={styles.stepperRow} lightColor="transparent" darkColor="transparent">
+            <Pressable
+              onPress={() => onAdjustPurchased(item.id, -STEP_GRAMS)}
+              hitSlop={8}
+              style={[styles.stepperButton, { backgroundColor: colors.cardDivider }]}
+              accessibilityLabel={`Decrease bought amount of ${item.name}`}
+            >
+              <FontAwesome name="minus" size={11} color={colors.text} />
+            </Pressable>
+            <Pressable
+              onPress={() => onAdjustPurchased(item.id, STEP_GRAMS)}
+              hitSlop={8}
+              style={[styles.stepperButton, { backgroundColor: colors.cardDivider }]}
+              accessibilityLabel={`Increase bought amount of ${item.name}`}
+            >
+              <FontAwesome name="plus" size={11} color={colors.text} />
+            </Pressable>
+          </View>
         </View>
       </View>
     </View>
@@ -184,13 +186,11 @@ const styles = StyleSheet.create({
   budgetValue: { fontFamily: 'SpaceMono', fontSize: 30, fontWeight: '700', letterSpacing: -0.5 },
   budgetTarget: { fontSize: 13, fontWeight: '600' },
   projectedText: { fontSize: 12, fontWeight: '600', marginTop: 10, lineHeight: 17 },
-  barTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
-  barFill: { height: 6, borderRadius: 3 },
 
   sectionTitle: { fontSize: 17, fontWeight: '700', marginBottom: 16 },
   itemsCard: { borderRadius: 20, paddingHorizontal: 20, marginBottom: 24, borderWidth: StyleSheet.hairlineWidth },
 
-  itemRow: { paddingVertical: 16, borderTopWidth: StyleSheet.hairlineWidth, gap: 10 },
+  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, borderTopWidth: StyleSheet.hairlineWidth },
   itemHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   itemName: { fontSize: 15, fontWeight: '700' },
   priceInputWrap: { flexDirection: 'row', alignItems: 'center', gap: 2 },

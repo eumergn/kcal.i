@@ -8,9 +8,9 @@ type ThemeContextValue = { scheme: Scheme; toggle: () => void; toggleFrom: (x: n
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-/** App-controlled theme, not system-driven - the app defaults to (and mostly favors) dark. */
+/** App-controlled theme, not system-driven - defaults to light, switchable from Profile > Settings. */
 export function AppThemeProvider({ children }: { children: ReactNode }) {
-  const [scheme, setScheme] = useState<Scheme>('dark');
+  const [scheme, setScheme] = useState<Scheme>('light');
   const [reveal, setReveal] = useState<{ x: number; y: number; radius: number; color: string } | null>(null);
   const scale = useRef(new Animated.Value(0)).current;
 
