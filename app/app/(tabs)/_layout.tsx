@@ -10,25 +10,62 @@ import { ThemeToggleButton } from '@/components/ThemeToggleButton';
 import { ScanTabButton } from '@/components/ScanTabButton';
 import { Logo } from '@/components/Logo';
 
-function TabBarIcon(props: {
+/** Active state is a grey pill behind the icon, not a colored icon - no accent color on the tab bar. */
+function TabBarIcon({
+  name,
+  color,
+  focused,
+}: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
   color: string;
+  focused: boolean;
 }) {
-  return <FontAwesome size={24} style={{ marginBottom: -3 }} {...props} />;
+  const scheme = useColorScheme() ?? 'light';
+  const c = Colors[scheme];
+  return (
+    <View
+      style={{
+        width: 42,
+        height: 30,
+        borderRadius: 15,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: focused ? c.tabActiveBackground : 'transparent',
+      }}
+    >
+      <FontAwesome name={name} size={20} color={color} />
+    </View>
+  );
 }
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const c = Colors[colorScheme ?? 'light'];
   const router = useRouter();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tabIconSelected,
-        tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault,
+        tabBarActiveTintColor: c.tabIconSelected,
+        tabBarInactiveTintColor: c.tabIconDefault,
+        tabBarShowLabel: false,
+        // Floating pill bar, detached from the bottom edge rather than flush - a
+        // full border (not just borderTop) since it's fully rounded on all sides.
         tabBarStyle: {
-          backgroundColor: Colors[colorScheme ?? 'light'].background,
-          borderTopColor: Colors[colorScheme ?? 'light'].cardDivider,
+          position: 'absolute',
+          left: 16,
+          right: 16,
+          bottom: 24,
+          height: 64,
+          borderRadius: 24,
+          backgroundColor: c.card,
+          borderWidth: 1,
+          borderColor: c.cardDivider,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.15,
+          shadowRadius: 12,
+          elevation: 8,
         },
         // Force every tab (including the custom scan button) to the same width slot -
         // without this, a custom tabBarButton doesn't get the same flex distribution
@@ -38,7 +75,7 @@ export default function TabLayout() {
         headerTitleAlign: 'center',
         headerLeft: () => (
           <View style={{ marginLeft: 16 }}>
-            <Logo layout="inline" size="small" />
+            <Logo layout="stacked" size="small" />
           </View>
         ),
         headerRight: () => <ThemeToggleButton />,
@@ -47,14 +84,14 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabBarIcon name="home" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="track"
         options={{
           title: 'Track',
-          tabBarIcon: ({ color }) => <TabBarIcon name="line-chart" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabBarIcon name="line-chart" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -68,14 +105,14 @@ export default function TabLayout() {
         name="grocery"
         options={{
           title: 'Grocery',
-          tabBarIcon: ({ color }) => <TabBarIcon name="shopping-cart" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabBarIcon name="shopping-cart" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabBarIcon name="user" color={color} focused={focused} />,
         }}
       />
     </Tabs>

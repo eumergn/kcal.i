@@ -13,6 +13,7 @@ import { Alert, Animated, Easing, LayoutAnimation, Pressable, ScrollView, StyleS
 import Svg, { Circle } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
@@ -414,45 +415,60 @@ export default function HomeScreen() {
       {isCurrentDay && (
       <>
       <Entrance>
-        <View style={styles.ringHero} lightColor="transparent" darkColor="transparent">
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.heroGlow,
-              {
-                backgroundColor: c.ringCalories + '59', // ~35% opacity glow
-                opacity: glowAnim,
-                transform: [{ scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.05] }) }],
-              },
-            ]}
-          />
-          <ProgressRing size={196} strokeWidth={16} progress={totals.calories / targets.calories} color={c.ringCalories} track={c.ringTrack}>
-            <Text style={[styles.ringValue, { color: c.text }]}>{Math.round(totals.calories)}</Text>
-            <Text style={[styles.ringTarget, { color: c.secondaryText }]}>/ {targets.calories} kcal</Text>
-          </ProgressRing>
+        <View style={styles.calorieRow} lightColor="transparent" darkColor="transparent">
+          <View style={styles.calorieTextCol} lightColor="transparent" darkColor="transparent">
+            <Text style={styles.calorieValue}>
+              <Text style={{ color: c.text }}>{Math.round(totals.calories)}</Text>
+              <Text style={{ color: c.secondaryText, fontWeight: '600' }}> / {targets.calories} kcal</Text>
+            </Text>
+            <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Calories taken</Text>
+          </View>
+
+          <View style={styles.calorieRingWrap} lightColor="transparent" darkColor="transparent">
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.heroGlow,
+                {
+                  backgroundColor: c.ringCalories + '59', // ~35% opacity glow
+                  opacity: glowAnim,
+                  transform: [{ scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.05] }) }],
+                },
+              ]}
+            />
+            <ProgressRing size={88} strokeWidth={9} progress={totals.calories / targets.calories} color={c.ringCalories} track={c.ringTrack}>
+              <FontAwesome5 name="fire" size={26} color={c.ringCalories} />
+            </ProgressRing>
+          </View>
         </View>
 
         <View style={styles.secondaryRow} lightColor="transparent" darkColor="transparent">
           <View style={styles.secondaryStat} lightColor="transparent" darkColor="transparent">
-            <ProgressRing size={96} strokeWidth={9} progress={totals.proteinG / targets.proteinG} color={c.ringProtein} track={c.ringTrack}>
-              <Text style={[styles.smallRingValue, { color: c.text }]}>{Math.round(totals.proteinG)}</Text>
-              <Text style={[styles.smallRingTarget, { color: c.secondaryText }]}>/{targets.proteinG}g</Text>
+            <ProgressRing size={70} strokeWidth={7} progress={totals.proteinG / targets.proteinG} color={c.ringProtein} track={c.ringTrack}>
+              <FontAwesome5 name="drumstick-bite" size={20} color={c.ringProtein} />
             </ProgressRing>
-            <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Protein</Text>
+            <Text style={[styles.smallRingGrams, { color: c.text }]}>
+              {Math.round(totals.proteinG)}<Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.proteinG}g</Text>
+            </Text>
+            <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Protein taken</Text>
           </View>
           <View style={styles.secondaryStat} lightColor="transparent" darkColor="transparent">
-            <ProgressRing size={96} strokeWidth={9} progress={totals.carbsG / targets.carbsG} color={c.ringCarbs} track={c.ringTrack}>
-              <Text style={[styles.smallRingValue, { color: c.text }]}>{Math.round(totals.carbsG)}</Text>
-              <Text style={[styles.smallRingTarget, { color: c.secondaryText }]}>/{targets.carbsG}g</Text>
+            <ProgressRing size={70} strokeWidth={7} progress={totals.carbsG / targets.carbsG} color={c.ringCarbs} track={c.ringTrack}>
+              <FontAwesome5 name="bread-slice" size={20} color={c.ringCarbs} />
             </ProgressRing>
-            <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Carbs</Text>
+            <Text style={[styles.smallRingGrams, { color: c.text }]}>
+              {Math.round(totals.carbsG)}<Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.carbsG}g</Text>
+            </Text>
+            <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Carbs taken</Text>
           </View>
           <View style={styles.secondaryStat} lightColor="transparent" darkColor="transparent">
-            <ProgressRing size={96} strokeWidth={9} progress={totals.fatG / targets.fatG} color={c.ringFat} track={c.ringTrack}>
-              <Text style={[styles.smallRingValue, { color: c.text }]}>{Math.round(totals.fatG)}</Text>
-              <Text style={[styles.smallRingTarget, { color: c.secondaryText }]}>/{targets.fatG}g</Text>
+            <ProgressRing size={70} strokeWidth={7} progress={totals.fatG / targets.fatG} color={c.ringFat} track={c.ringTrack}>
+              <FontAwesome5 name="tint" size={20} color={c.ringFat} />
             </ProgressRing>
-            <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Fat</Text>
+            <Text style={[styles.smallRingGrams, { color: c.text }]}>
+              {Math.round(totals.fatG)}<Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.fatG}g</Text>
+            </Text>
+            <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Fat taken</Text>
           </View>
         </View>
       </Entrance>
@@ -480,7 +496,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: 20, paddingBottom: 120 },
   headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
   arrowSlot: { flex: 1 },
   periodLabelSlot: { flex: 2, alignItems: 'center' },
@@ -492,17 +508,17 @@ const styles = StyleSheet.create({
   backToTodayButton: { borderRadius: 14, paddingHorizontal: 20, paddingVertical: 12, marginTop: 8 },
   backToTodayText: { fontSize: 13, fontWeight: '700' },
 
-  ringHero: { alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
-  heroGlow: { position: 'absolute', width: 236, height: 236, borderRadius: 118 },
+  calorieRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 },
+  calorieTextCol: { flex: 1, gap: 6 },
+  calorieValue: { fontFamily: 'SpaceMono', fontSize: 30, fontWeight: '700', letterSpacing: -1 },
+  calorieRingWrap: { alignItems: 'center', justifyContent: 'center' },
+  heroGlow: { position: 'absolute', width: 108, height: 108, borderRadius: 54 },
   ringCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  ringValue: { fontFamily: 'SpaceMono', fontSize: 36, fontWeight: '700', letterSpacing: -1 },
-  ringTarget: { fontSize: 12, fontWeight: '600', marginTop: 4 },
 
-  secondaryRow: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
-  secondaryStat: { alignItems: 'center', gap: 10 },
-  secondaryLabel: { fontSize: 11, fontWeight: '600' },
-  smallRingValue: { fontFamily: 'SpaceMono', fontSize: 14, fontWeight: '700' },
-  smallRingTarget: { fontSize: 8, fontWeight: '600', marginTop: 2 },
+  secondaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  secondaryStat: { flex: 1, alignItems: 'center', gap: 8 },
+  secondaryLabel: { fontSize: 10, fontWeight: '600', textAlign: 'center' },
+  smallRingGrams: { fontFamily: 'SpaceMono', fontSize: 13, fontWeight: '700' },
 
   sectionTitle: { fontSize: 17, fontWeight: '700', marginTop: 40, marginBottom: 16 },
   mealsCard: { borderRadius: 20, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth },

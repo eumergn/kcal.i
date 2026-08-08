@@ -162,7 +162,7 @@ export default function GroceryScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: 20, paddingBottom: 120 },
   eyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 2, marginBottom: 16 },
 
   budgetCard: { borderRadius: 22, padding: 20, marginBottom: 32, borderWidth: StyleSheet.hairlineWidth },
