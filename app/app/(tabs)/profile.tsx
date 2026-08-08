@@ -1,28 +1,32 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { Animated, Pressable, StyleSheet } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/context/AuthContext';
+import { useTabSlide } from '@/components/useTabSlide';
 
 export default function ProfileScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
   const { session, signOut } = useAuth();
+  const slideStyle = useTabSlide('profile');
 
   return (
-    <View style={[styles.container, { backgroundColor: c.background }]}>
-      <Text style={[styles.title, { color: c.text }]}>Profile</Text>
-      <Text style={[styles.subtitle, { color: c.secondaryText }]}>
-        Goal, budget, diet, allergies and account settings, coming soon.
-      </Text>
-      {session?.user?.email && (
-        <Text style={[styles.email, { color: c.secondaryText }]}>Signed in as {session.user.email}</Text>
-      )}
-      <Pressable onPress={signOut} style={[styles.signOutButton, { backgroundColor: c.cardDivider }]}>
-        <Text style={[styles.signOutText, { color: c.ringProtein }]}>Sign out</Text>
-      </Pressable>
-    </View>
+    <Animated.View style={[{ flex: 1 }, slideStyle]}>
+      <View style={[styles.container, { backgroundColor: c.background }]}>
+        <Text style={[styles.title, { color: c.text }]}>Profile</Text>
+        <Text style={[styles.subtitle, { color: c.secondaryText }]}>
+          Goal, budget, diet, allergies and account settings, coming soon.
+        </Text>
+        {session?.user?.email && (
+          <Text style={[styles.email, { color: c.secondaryText }]}>Signed in as {session.user.email}</Text>
+        )}
+        <Pressable onPress={signOut} style={[styles.signOutButton, { backgroundColor: c.cardDivider }]}>
+          <Text style={[styles.signOutText, { color: c.ringProtein }]}>Sign out</Text>
+        </Pressable>
+      </View>
+    </Animated.View>
   );
 }
 

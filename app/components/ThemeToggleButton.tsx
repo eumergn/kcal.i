@@ -5,12 +5,12 @@ import Colors from '@/constants/Colors';
 import { useAppTheme } from '@/context/ThemeContext';
 
 export function ThemeToggleButton() {
-  const { scheme, toggle } = useAppTheme();
+  const { scheme, toggleFrom } = useAppTheme();
   const c = Colors[scheme];
 
   return (
     <Pressable
-      onPress={toggle}
+      onPress={(e) => toggleFrom(e.nativeEvent.pageX, e.nativeEvent.pageY)}
       hitSlop={12}
       style={{ marginRight: 16 }}
       accessibilityRole="button"

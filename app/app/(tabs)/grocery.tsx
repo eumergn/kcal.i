@@ -6,6 +6,7 @@ import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { GroceryItem, formatGrams, initialGroceryItems, itemCost, monthlyBudget } from '@/constants/groceryData';
+import { useTabSlide } from '@/components/useTabSlide';
 
 const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
 const STEP_GRAMS = 250;
@@ -104,6 +105,7 @@ export default function GroceryScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
   const [items, setItems] = useState(initialGroceryItems);
+  const slideStyle = useTabSlide('grocery');
 
   const totals = useMemo(() => {
     const spent = items.reduce((s, it) => s + itemCost(it, it.purchasedGrams), 0);
@@ -126,6 +128,7 @@ export default function GroceryScreen() {
   };
 
   return (
+    <Animated.View style={[{ flex: 1 }, slideStyle]}>
     <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.content}>
       <Text style={[styles.eyebrow, { color: c.secondaryText }]}>THIS MONTH</Text>
 
@@ -158,6 +161,7 @@ export default function GroceryScreen() {
         Tap a price to edit it if you find it cheaper elsewhere - it updates your monthly total.
       </Text>
     </ScrollView>
+    </Animated.View>
   );
 }
 

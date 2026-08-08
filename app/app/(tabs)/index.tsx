@@ -14,6 +14,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
@@ -21,11 +22,10 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { usePlan } from '@/context/PlanContext';
 import { Meal, mealTotals, targets } from '@/constants/planData';
 import { accountCreatedAt } from '@/constants/account';
+import { useTabSlide } from '@/components/useTabSlide';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
-
-type ViewMode = 'day' | 'week' | 'month';
 
 function startOfToday(): Date {
   const d = new Date();
@@ -43,44 +43,41 @@ function startOfWeek(date: Date): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   const day = d.getDay(); // 0=Sun..6=Sat
-  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day)); // Monday-start week
+  d.setDate(d.getDate() - day); // Sunday-start week, matching the reference strip
   return d;
 }
 
-/** The earliest day arrows are allowed to reach - can't view history from before the account existed. */
+/** The earliest day the strip is allowed to select - can't view history from before the account existed. */
 const MIN_DAY_OFFSET = -Math.floor((startOfToday().getTime() - accountCreatedAt.getTime()) / 86400000);
 
+type WeekDay = {
+  offset: number;
+  date: Date;
+  letter: string;
+  dateNum: number;
+  isToday: boolean;
+  enabled: boolean;
+};
+
 /**
- * Only "today" (day mode, offset 0) has real data - one sample day, no backend yet.
- * Rather than silently repeating today's numbers under a fake "Yesterday" label,
- * every other day/week/month shows an honest empty state (see HomeScreen).
- * Arrows always move the selected day by exactly ±1; tapping the label cycles which
- * zoom level (day/week/month) is shown for whichever day is currently selected.
+ * The current Sun-Sat week, one cell per day. Only "today" (offset 0) has real
+ * tracked data - one sample day, no backend yet - so every other cell's ring stays
+ * an empty track rather than showing a fabricated completion percentage.
  */
-function formatPeriodLabel(mode: ViewMode, dayOffset: number): string {
-  const today = startOfToday();
-  const selected = addDays(today, dayOffset);
-
-  if (mode === 'day') {
-    if (dayOffset === 0) return 'TODAY';
-    if (dayOffset === -1) return 'YESTERDAY';
-    if (dayOffset === 1) return 'TOMORROW';
-    return selected.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase();
-  }
-
-  if (mode === 'week') {
-    const weekDiff = Math.round((startOfWeek(selected).getTime() - startOfWeek(today).getTime()) / (7 * 86400000));
-    if (weekDiff === 0) return 'THIS WEEK';
-    if (weekDiff === -1) return 'LAST WEEK';
-    if (weekDiff === 1) return 'NEXT WEEK';
-    return `${weekDiff > 0 ? '+' : ''}${weekDiff} WEEKS`;
-  }
-
-  const monthDiff = (selected.getFullYear() - today.getFullYear()) * 12 + (selected.getMonth() - today.getMonth());
-  if (monthDiff === 0) return 'THIS MONTH';
-  if (monthDiff === -1) return 'LAST MONTH';
-  if (monthDiff === 1) return 'NEXT MONTH';
-  return `${monthDiff > 0 ? '+' : ''}${monthDiff} MONTHS`;
+function buildWeekDays(today: Date): WeekDay[] {
+  const weekStart = startOfWeek(today);
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(weekStart, i);
+    const offset = Math.round((date.getTime() - today.getTime()) / 86400000);
+    return {
+      offset,
+      date,
+      letter: date.toLocaleDateString('en-US', { weekday: 'short' }),
+      dateNum: date.getDate(),
+      isToday: offset === 0,
+      enabled: offset >= MIN_DAY_OFFSET,
+    };
+  });
 }
 
 /** "08:00" -> 480 (minutes since midnight), for comparing against the device clock. */
@@ -280,19 +277,11 @@ export default function HomeScreen() {
   const c = Colors[scheme];
   const router = useRouter();
   const { meals, toggleEaten, catalog } = usePlan();
-  const [viewMode, setViewMode] = useState<ViewMode>('day');
-  const [dayOffset, setDayOffset] = useState(0);
-  const isCurrentDay = viewMode === 'day' && dayOffset === 0;
+  const [selectedOffset, setSelectedOffset] = useState(0);
+  const isCurrentDay = selectedOffset === 0;
+  const slideStyle = useTabSlide('index');
 
-  // Arrows always step by exactly one day, regardless of view mode, clamped so you
-  // can't navigate to before the account was created.
-  const goToPreviousDay = () => setDayOffset((o) => Math.max(o - 1, MIN_DAY_OFFSET));
-  const goToNextDay = () => setDayOffset((o) => o + 1);
-  const atEarliestDay = dayOffset <= MIN_DAY_OFFSET;
-
-  // Tapping the label cycles the zoom level for whichever day is currently selected -
-  // independent of the arrows, which only ever move by a single day.
-  const cycleViewMode = () => setViewMode((m) => (m === 'day' ? 'week' : m === 'week' ? 'month' : 'day'));
+  const weekDays = useMemo(() => buildWeekDays(startOfToday()), []);
 
   const totals = useMemo(() => {
     return meals
@@ -362,51 +351,43 @@ export default function HomeScreen() {
   };
 
   return (
+    <Animated.View style={[{ flex: 1 }, slideStyle]}>
     <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.content}>
-      <View style={styles.headerRow} lightColor="transparent" darkColor="transparent">
-        <View style={styles.arrowSlot}>
-          <Pressable
-            onPress={goToPreviousDay}
-            disabled={atEarliestDay}
-            hitSlop={14}
-            accessibilityLabel="Previous day"
-            style={{ opacity: atEarliestDay ? 0.3 : 1 }}
-          >
-            <FontAwesome name="chevron-left" size={15} color={c.secondaryText} />
-          </Pressable>
-        </View>
-
-        <Pressable onPress={cycleViewMode} style={styles.periodLabelSlot} accessibilityLabel="Change view: day, week, or month">
-          <Text style={[styles.periodLabel, { color: c.text }]}>{formatPeriodLabel(viewMode, dayOffset)}</Text>
-        </Pressable>
-
-        <View style={[styles.arrowSlot, { alignItems: 'flex-end' }]}>
-          <Pressable onPress={goToNextDay} hitSlop={14} accessibilityLabel="Next day">
-            <FontAwesome name="chevron-right" size={15} color={c.secondaryText} />
-          </Pressable>
-        </View>
+      <View style={styles.weekStrip} lightColor="transparent" darkColor="transparent">
+        {weekDays.map((day) => {
+          const isSelected = day.offset === selectedOffset;
+          const dayProgress = day.isToday ? Math.min(totals.calories / targets.calories, 1) : 0;
+          return (
+            <Pressable
+              key={day.offset}
+              onPress={() => day.enabled && setSelectedOffset(day.offset)}
+              disabled={!day.enabled}
+              style={[styles.dayCell, { opacity: day.enabled ? 1 : 0.3 }]}
+              accessibilityLabel={`${day.letter} ${day.dateNum}${day.isToday ? ', today' : ''}`}
+            >
+              <Text style={[styles.dayLetter, { color: c.secondaryText }]}>{day.letter}</Text>
+              <ProgressRing
+                size={40}
+                strokeWidth={2}
+                progress={dayProgress}
+                color={isSelected ? c.text : c.ringTrack}
+                track={c.ringTrack}
+              >
+                <Text style={[styles.dayNum, { color: isSelected ? c.text : c.secondaryText }]}>{day.dateNum}</Text>
+              </ProgressRing>
+            </Pressable>
+          );
+        })}
       </View>
 
       {!isCurrentDay && (
         <View style={[styles.emptyStateCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
           <FontAwesome name="calendar-o" size={26} color={c.secondaryText} />
-          <Text style={[styles.emptyStateTitle, { color: c.text }]}>
-            No data for this {viewMode === 'day' ? 'day' : viewMode}
-          </Text>
+          <Text style={[styles.emptyStateTitle, { color: c.text }]}>No data for this day</Text>
           <Text style={[styles.emptyStateSubtitle, { color: c.secondaryText }]}>
-            {viewMode === 'day'
-              ? "Historical days will show up here once there's real tracked data to look back on."
-              : `Weekly and monthly trends need a few days of tracked data first. Target: ${(
-                  targets.calories * (viewMode === 'week' ? 7 : 30)
-                ).toLocaleString()} kcal.`}
+            Historical and future days will show up here once there&apos;s real tracked data to look back on.
           </Text>
-          <Pressable
-            onPress={() => {
-              setViewMode('day');
-              setDayOffset(0);
-            }}
-            style={[styles.backToTodayButton, { backgroundColor: c.cardDivider }]}
-          >
+          <Pressable onPress={() => setSelectedOffset(0)} style={[styles.backToTodayButton, { backgroundColor: c.cardDivider }]}>
             <Text style={[styles.backToTodayText, { color: c.text }]}>Back to today</Text>
           </Pressable>
         </View>
@@ -415,13 +396,13 @@ export default function HomeScreen() {
       {isCurrentDay && (
       <>
       <Entrance>
-        <View style={styles.calorieRow} lightColor="transparent" darkColor="transparent">
+        <View style={[styles.calorieCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
           <View style={styles.calorieTextCol} lightColor="transparent" darkColor="transparent">
             <Text style={styles.calorieValue}>
               <Text style={{ color: c.text }}>{Math.round(totals.calories)}</Text>
-              <Text style={{ color: c.secondaryText, fontWeight: '600' }}> / {targets.calories} kcal</Text>
+              <Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.calories}kcal</Text>
             </Text>
-            <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Calories taken</Text>
+            <Text style={[styles.calorieLabel, { color: c.secondaryText }]}>Calories taken</Text>
           </View>
 
           <View style={styles.calorieRingWrap} lightColor="transparent" darkColor="transparent">
@@ -436,34 +417,34 @@ export default function HomeScreen() {
                 },
               ]}
             />
-            <ProgressRing size={88} strokeWidth={9} progress={totals.calories / targets.calories} color={c.ringCalories} track={c.ringTrack}>
+            <ProgressRing size={88} strokeWidth={6} progress={totals.calories / targets.calories} color={c.ringCalories} track={c.ringTrack}>
               <FontAwesome5 name="fire" size={26} color={c.ringCalories} />
             </ProgressRing>
           </View>
         </View>
 
         <View style={styles.secondaryRow} lightColor="transparent" darkColor="transparent">
-          <View style={styles.secondaryStat} lightColor="transparent" darkColor="transparent">
-            <ProgressRing size={70} strokeWidth={7} progress={totals.proteinG / targets.proteinG} color={c.ringProtein} track={c.ringTrack}>
-              <FontAwesome5 name="drumstick-bite" size={20} color={c.ringProtein} />
+          <View style={[styles.secondaryStat, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
+            <ProgressRing size={64} strokeWidth={5} progress={totals.proteinG / targets.proteinG} color={c.ringProtein} track={c.ringTrack}>
+              <MaterialCommunityIcons name="food-drumstick" size={22} color={c.ringProtein} />
             </ProgressRing>
             <Text style={[styles.smallRingGrams, { color: c.text }]}>
               {Math.round(totals.proteinG)}<Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.proteinG}g</Text>
             </Text>
             <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Protein taken</Text>
           </View>
-          <View style={styles.secondaryStat} lightColor="transparent" darkColor="transparent">
-            <ProgressRing size={70} strokeWidth={7} progress={totals.carbsG / targets.carbsG} color={c.ringCarbs} track={c.ringTrack}>
-              <FontAwesome5 name="bread-slice" size={20} color={c.ringCarbs} />
+          <View style={[styles.secondaryStat, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
+            <ProgressRing size={64} strokeWidth={5} progress={totals.carbsG / targets.carbsG} color={c.ringCarbs} track={c.ringTrack}>
+              <FontAwesome5 name="bread-slice" size={19} color={c.ringCarbs} />
             </ProgressRing>
             <Text style={[styles.smallRingGrams, { color: c.text }]}>
               {Math.round(totals.carbsG)}<Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.carbsG}g</Text>
             </Text>
             <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Carbs taken</Text>
           </View>
-          <View style={styles.secondaryStat} lightColor="transparent" darkColor="transparent">
-            <ProgressRing size={70} strokeWidth={7} progress={totals.fatG / targets.fatG} color={c.ringFat} track={c.ringTrack}>
-              <FontAwesome5 name="tint" size={20} color={c.ringFat} />
+          <View style={[styles.secondaryStat, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
+            <ProgressRing size={64} strokeWidth={5} progress={totals.fatG / targets.fatG} color={c.ringFat} track={c.ringTrack}>
+              <FontAwesome5 name="tint" size={19} color={c.ringFat} />
             </ProgressRing>
             <Text style={[styles.smallRingGrams, { color: c.text }]}>
               {Math.round(totals.fatG)}<Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.fatG}g</Text>
@@ -492,15 +473,17 @@ export default function HomeScreen() {
       </>
       )}
     </ScrollView>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 120 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
-  arrowSlot: { flex: 1 },
-  periodLabelSlot: { flex: 2, alignItems: 'center' },
-  periodLabel: { fontSize: 15, fontWeight: '700', letterSpacing: 1.5 },
+
+  weekStrip: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
+  dayCell: { alignItems: 'center', gap: 6 },
+  dayLetter: { fontSize: 11, fontWeight: '600' },
+  dayNum: { fontSize: 13, fontWeight: '700' },
 
   emptyStateCard: { borderRadius: 22, padding: 28, alignItems: 'center', gap: 10, borderWidth: StyleSheet.hairlineWidth },
   emptyStateTitle: { fontSize: 16, fontWeight: '700', marginTop: 4 },
@@ -508,15 +491,22 @@ const styles = StyleSheet.create({
   backToTodayButton: { borderRadius: 14, paddingHorizontal: 20, paddingVertical: 12, marginTop: 8 },
   backToTodayText: { fontSize: 13, fontWeight: '700' },
 
-  calorieRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 },
-  calorieTextCol: { flex: 1, gap: 6 },
-  calorieValue: { fontFamily: 'SpaceMono', fontSize: 30, fontWeight: '700', letterSpacing: -1 },
+  calorieCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: 24, borderWidth: StyleSheet.hairlineWidth, padding: 24, marginBottom: 16,
+  },
+  calorieTextCol: { flex: 1, gap: 6, paddingRight: 12 },
+  calorieValue: { fontFamily: 'SpaceMono', fontSize: 30, fontWeight: '700', letterSpacing: -0.5 },
+  calorieLabel: { fontSize: 14, fontWeight: '700' },
   calorieRingWrap: { alignItems: 'center', justifyContent: 'center' },
   heroGlow: { position: 'absolute', width: 108, height: 108, borderRadius: 54 },
   ringCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   secondaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  secondaryStat: { flex: 1, alignItems: 'center', gap: 8 },
+  secondaryStat: {
+    flex: 1, alignItems: 'center', gap: 8,
+    borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, paddingVertical: 16,
+  },
   secondaryLabel: { fontSize: 10, fontWeight: '600', textAlign: 'center' },
   smallRingGrams: { fontFamily: 'SpaceMono', fontSize: 13, fontWeight: '700' },
 

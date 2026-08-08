@@ -16,12 +16,12 @@ export function ScanTabButton({ onPress }: { onPress: () => void }) {
         onPress={onPress}
         style={({ pressed }) => [
           styles.button,
-          { backgroundColor: c.ringCalories, opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.94 : 1 }] },
+          { backgroundColor: c.text, opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.94 : 1 }] },
         ]}
         accessibilityRole="button"
         accessibilityLabel="Scan a product barcode"
       >
-        <FontAwesome name="camera" size={22} color="#04110D" />
+        <FontAwesome name="camera" size={22} color={c.background} />
       </Pressable>
     </View>
   );

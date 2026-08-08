@@ -70,7 +70,10 @@ export default function TabLayout() {
         // Force every tab (including the custom scan button) to the same width slot -
         // without this, a custom tabBarButton doesn't get the same flex distribution
         // as the default icon+label buttons, and the FAB ends up visibly off-center.
-        tabBarItemStyle: { flex: 1 },
+        // Explicit centering on both axes: with tabBarShowLabel false, the default
+        // item still reserves label padding that pushes the icon off vertical center.
+        tabBarItemStyle: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+        tabBarIconStyle: { marginTop: 0, marginBottom: 0 },
         headerShown: useClientOnlyValue(false, true),
         headerTitleAlign: 'center',
         headerLeft: () => (

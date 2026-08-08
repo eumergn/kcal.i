@@ -15,7 +15,7 @@ export function Logo({ layout = 'stacked', size = 'large' }: { layout?: 'stacked
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
   const fontSize = size === 'large' ? 32 : 14;
-  const iconSize = size === 'large' ? 20 : 9;
+  const iconSize = size === 'large' ? 30 : 14;
   // Mini dumbbell tucked close under the wordmark in the compact header - a large
   // stacked gap (fine on the spacious auth screens) would push this past bar height.
   const gap = layout === 'stacked' ? (size === 'large' ? 6 : 1) : 8;
@@ -23,7 +23,8 @@ export function Logo({ layout = 'stacked', size = 'large' }: { layout?: 'stacked
   return (
     <RNView style={{ flexDirection: layout === 'stacked' ? 'column' : 'row', alignItems: 'center', gap }}>
       <Text style={{ fontFamily: 'BrunoAce', fontSize, color: c.text }}>Kcal.i</Text>
-      <FontAwesome5 name="dumbbell" size={iconSize} color={c.text} />
+      {/* Stretched horizontally - the stock glyph reads too narrow/small under the wordmark otherwise. */}
+      <FontAwesome5 name="dumbbell" size={iconSize} color={c.text} style={{ transform: [{ scaleX: 1.35 }] }} />
     </RNView>
   );
 }
