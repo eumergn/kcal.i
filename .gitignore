@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.expo/
+
+# Env files (real secrets/keys live here, never commit)
+.env
+.env.*.local
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+
+# Supabase CLI local cache (regenerated automatically, not project source)
+supabase/.temp/
