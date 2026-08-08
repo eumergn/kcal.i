@@ -92,7 +92,7 @@ export default function MealDetailScreen() {
       <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.content}>
         <Text style={[styles.time, { color: c.secondaryText }]}>{meal.time}</Text>
 
-        <View style={[styles.summaryCard, { backgroundColor: c.card }]}>
+        <View style={[styles.summaryCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
           <Text style={[styles.summaryCalories, { color: c.text }]}>{Math.round(totals.calories)} kcal</Text>
           <Text style={styles.summaryMacros}>
             <Text style={{ color: c.ringProtein, fontWeight: '700' }}>P {Math.round(totals.proteinG)}g</Text>
@@ -104,7 +104,7 @@ export default function MealDetailScreen() {
         </View>
 
         <Text style={[styles.sectionTitle, { color: c.text }]}>Ingredients</Text>
-        <View style={[styles.itemsCard, { backgroundColor: c.card }]}>
+        <View style={[styles.itemsCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
           {meal.items.length === 0 && (
             <Text style={[styles.emptyText, { color: c.secondaryText }]}>No ingredients yet - add some below.</Text>
           )}
@@ -150,12 +150,12 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40 },
   time: { fontSize: 13, fontWeight: '600', marginBottom: 16 },
 
-  summaryCard: { borderRadius: 20, padding: 20, marginBottom: 28, alignItems: 'center' },
+  summaryCard: { borderRadius: 20, padding: 20, marginBottom: 28, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth },
   summaryCalories: { fontFamily: 'SpaceMono', fontSize: 30, fontWeight: '700' },
   summaryMacros: { fontSize: 13, fontWeight: '600', marginTop: 8 },
 
   sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 12 },
-  itemsCard: { borderRadius: 18, paddingHorizontal: 16, marginBottom: 28 },
+  itemsCard: { borderRadius: 18, paddingHorizontal: 16, marginBottom: 28, borderWidth: StyleSheet.hairlineWidth },
   emptyText: { fontSize: 13, fontWeight: '600', paddingVertical: 16 },
 
   itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderTopWidth: StyleSheet.hairlineWidth, gap: 8 },

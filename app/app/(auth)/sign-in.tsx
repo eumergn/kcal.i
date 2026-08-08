@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Link, router } from 'expo-router';
-import { Image } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
 import { AuthTextInput } from '@/components/AuthTextInput';
+import { Logo } from '@/components/Logo';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/context/AuthContext';
@@ -36,12 +36,14 @@ export default function SignInScreen() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.content}>
-        <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+        <View style={styles.logoWrap} lightColor="transparent" darkColor="transparent">
+          <Logo />
+        </View>
         <Text style={[styles.title, { color: c.text }]}>Welcome back</Text>
         <Text style={[styles.subtitle, { color: c.secondaryText }]}>Sign in to see today&apos;s plan.</Text>
 
         {!isSupabaseConfigured && (
-          <View style={[styles.warningBanner, { backgroundColor: c.card }]}>
+          <View style={[styles.warningBanner, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
             <Text style={[styles.warningText, { color: c.ringProtein }]}>
               Supabase isn&apos;t connected yet - add your project URL and anon key to .env (see .env.example).
             </Text>
@@ -95,11 +97,11 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   content: { flexGrow: 1, padding: 24, justifyContent: 'center' },
-  logo: { width: 56, height: 56, borderRadius: 16, alignSelf: 'center', marginBottom: 20 },
+  logoWrap: { alignItems: 'center', marginBottom: 28 },
   title: { fontSize: 26, fontWeight: '800', textAlign: 'center' },
   subtitle: { fontSize: 14, fontWeight: '600', textAlign: 'center', marginTop: 6, marginBottom: 28 },
 
-  warningBanner: { borderRadius: 14, padding: 14, marginBottom: 20 },
+  warningBanner: { borderRadius: 14, padding: 14, marginBottom: 20, borderWidth: StyleSheet.hairlineWidth },
   warningText: { fontSize: 12, fontWeight: '600', lineHeight: 17 },
 
   form: { gap: 12 },

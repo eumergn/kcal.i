@@ -59,7 +59,7 @@ export default function ForgotPasswordScreen() {
         <Text style={[styles.subtitle, { color: c.secondaryText }]}>We&apos;ll email you a link to set a new one.</Text>
 
         {!isSupabaseConfigured && (
-          <View style={[styles.warningBanner, { backgroundColor: c.card }]}>
+          <View style={[styles.warningBanner, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
             <Text style={[styles.warningText, { color: c.ringProtein }]}>
               Supabase isn&apos;t connected yet - add your project URL and anon key to .env (see .env.example).
             </Text>
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '800', textAlign: 'center' },
   subtitle: { fontSize: 14, fontWeight: '600', textAlign: 'center', marginTop: 6, marginBottom: 28 },
 
-  warningBanner: { borderRadius: 14, padding: 14, marginBottom: 20 },
+  warningBanner: { borderRadius: 14, padding: 14, marginBottom: 20, borderWidth: StyleSheet.hairlineWidth },
   warningText: { fontSize: 12, fontWeight: '600', lineHeight: 17 },
 
   form: { gap: 12 },

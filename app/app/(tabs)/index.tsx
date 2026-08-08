@@ -387,7 +387,7 @@ export default function HomeScreen() {
       </View>
 
       {!isCurrentDay && (
-        <View style={[styles.emptyStateCard, { backgroundColor: c.card }]}>
+        <View style={[styles.emptyStateCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
           <FontAwesome name="calendar-o" size={26} color={c.secondaryText} />
           <Text style={[styles.emptyStateTitle, { color: c.text }]}>
             No data for this {viewMode === 'day' ? 'day' : viewMode}
@@ -404,7 +404,7 @@ export default function HomeScreen() {
               setViewMode('day');
               setDayOffset(0);
             }}
-            style={[styles.backToTodayButton, { backgroundColor: c.background }]}
+            style={[styles.backToTodayButton, { backgroundColor: c.cardDivider }]}
           >
             <Text style={[styles.backToTodayText, { color: c.text }]}>Back to today</Text>
           </Pressable>
@@ -459,7 +459,7 @@ export default function HomeScreen() {
 
       <Entrance delay={90}>
         <Text style={[styles.sectionTitle, { color: c.text }]}>Today&apos;s meals</Text>
-        <View style={[styles.mealsCard, { backgroundColor: c.card }]}>
+        <View style={[styles.mealsCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
           {meals.map((meal, i) => (
             <MealRow
               key={meal.id}
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
   periodLabelSlot: { flex: 2, alignItems: 'center' },
   periodLabel: { fontSize: 15, fontWeight: '700', letterSpacing: 1.5 },
 
-  emptyStateCard: { borderRadius: 22, padding: 28, alignItems: 'center', gap: 10 },
+  emptyStateCard: { borderRadius: 22, padding: 28, alignItems: 'center', gap: 10, borderWidth: StyleSheet.hairlineWidth },
   emptyStateTitle: { fontSize: 16, fontWeight: '700', marginTop: 4 },
   emptyStateSubtitle: { fontSize: 13, fontWeight: '600', textAlign: 'center', lineHeight: 19 },
   backToTodayButton: { borderRadius: 14, paddingHorizontal: 20, paddingVertical: 12, marginTop: 8 },
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   smallRingTarget: { fontSize: 8, fontWeight: '600', marginTop: 2 },
 
   sectionTitle: { fontSize: 17, fontWeight: '700', marginTop: 40, marginBottom: 16 },
-  mealsCard: { borderRadius: 20, overflow: 'hidden' },
+  mealsCard: { borderRadius: 20, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth },
   mealRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20, gap: 16, minHeight: 44 },
   mealTimeCol: { width: 48 },
   mealTime: { fontSize: 12, fontWeight: '600' },

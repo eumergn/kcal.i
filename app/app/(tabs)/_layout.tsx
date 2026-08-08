@@ -3,13 +3,12 @@ import { View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs, useRouter } from 'expo-router';
 
-import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { ThemeToggleButton } from '@/components/ThemeToggleButton';
 import { ScanTabButton } from '@/components/ScanTabButton';
-import { HeaderLogo } from '@/components/HeaderLogo';
+import { Logo } from '@/components/Logo';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -38,13 +37,8 @@ export default function TabLayout() {
         headerShown: useClientOnlyValue(false, true),
         headerTitleAlign: 'center',
         headerLeft: () => (
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16, gap: 8 }}>
-            <HeaderLogo />
-            {/* Bruno Ace (bundled, single weight) - matches the angular cut-corner
-                wordmark reference exactly. No fontWeight override: forcing a numeric
-                weight on a single-weight custom TTF doesn't bold it, just risks iOS
-                silently ignoring the custom face entirely (same issue as SpaceMono). */}
-            <Text style={{ fontFamily: 'BrunoAce', fontSize: 17 }}>Kcal.i</Text>
+          <View style={{ marginLeft: 16 }}>
+            <Logo layout="inline" size="small" />
           </View>
         ),
         headerRight: () => <ThemeToggleButton />,

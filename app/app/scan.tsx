@@ -126,14 +126,14 @@ export default function ScanScreen() {
       )}
 
       {loading && (
-        <View style={[styles.center, styles.resultCard, { backgroundColor: c.card }]}>
+        <View style={[styles.center, styles.resultCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
           <ActivityIndicator color={c.ringCalories} />
           <Text style={[styles.loadingText, { color: c.secondaryText }]}>Looking up product...</Text>
         </View>
       )}
 
       {error && !loading && (
-        <View style={[styles.resultCard, { backgroundColor: c.card }]}>
+        <View style={[styles.resultCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
           <Text style={[styles.errorText, { color: c.text }]}>{error}</Text>
           <Pressable onPress={scanAnother} style={[styles.primaryButton, { backgroundColor: c.ringCalories }]}>
             <Text style={styles.primaryButtonText}>Try again</Text>
@@ -142,7 +142,7 @@ export default function ScanScreen() {
       )}
 
       {product && !loading && (
-        <View style={[styles.resultCard, { backgroundColor: c.card }]}>
+        <View style={[styles.resultCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
           <Text style={[styles.productName, { color: c.text }]} numberOfLines={2}>{product.name}</Text>
           <Text style={[styles.productCalories, { color: c.text }]}>{Math.round(product.caloriesPer100)} kcal /100g</Text>
           <Text style={styles.productMacros}>
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   overlayHint: { color: '#FFFFFF', fontSize: 13, fontWeight: '600', marginTop: 20, textAlign: 'center', paddingHorizontal: 40 },
 
   resultCard: {
-    position: 'absolute', left: 20, right: 20, bottom: 40, borderRadius: 22, padding: 24, gap: 4,
+    position: 'absolute', left: 20, right: 20, bottom: 40, borderRadius: 22, padding: 24, gap: 4, borderWidth: StyleSheet.hairlineWidth,
   },
   loadingText: { fontSize: 13, fontWeight: '600', marginTop: 10 },
   errorText: { fontSize: 14, fontWeight: '600', marginBottom: 16, textAlign: 'center' },

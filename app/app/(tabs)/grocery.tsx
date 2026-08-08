@@ -129,7 +129,7 @@ export default function GroceryScreen() {
     <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.content}>
       <Text style={[styles.eyebrow, { color: c.secondaryText }]}>THIS MONTH</Text>
 
-      <View style={[styles.budgetCard, { backgroundColor: c.card }]}>
+      <View style={[styles.budgetCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
         <Text style={[styles.budgetLabel, { color: c.secondaryText }]}>Spent</Text>
         <View style={styles.budgetValueRow} lightColor="transparent" darkColor="transparent">
           <Text style={[styles.budgetValue, { color: c.text }]}>{totals.spent.toFixed(2)}</Text>
@@ -142,7 +142,7 @@ export default function GroceryScreen() {
       </View>
 
       <Text style={[styles.sectionTitle, { color: c.text }]}>Grocery items</Text>
-      <View style={[styles.itemsCard, { backgroundColor: c.card }]}>
+      <View style={[styles.itemsCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
         {items.map((item, i) => (
           <GroceryRow
             key={item.id}
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40 },
   eyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 2, marginBottom: 16 },
 
-  budgetCard: { borderRadius: 22, padding: 20, marginBottom: 32 },
+  budgetCard: { borderRadius: 22, padding: 20, marginBottom: 32, borderWidth: StyleSheet.hairlineWidth },
   budgetLabel: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
   budgetValueRow: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 12 },
   budgetValue: { fontFamily: 'SpaceMono', fontSize: 34, fontWeight: '700', letterSpacing: -1 },
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   barFill: { height: 6, borderRadius: 3 },
 
   sectionTitle: { fontSize: 17, fontWeight: '700', marginBottom: 16 },
-  itemsCard: { borderRadius: 20, paddingHorizontal: 20, marginBottom: 24 },
+  itemsCard: { borderRadius: 20, paddingHorizontal: 20, marginBottom: 24, borderWidth: StyleSheet.hairlineWidth },
 
   itemRow: { paddingVertical: 16, borderTopWidth: StyleSheet.hairlineWidth, gap: 10 },
   itemHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

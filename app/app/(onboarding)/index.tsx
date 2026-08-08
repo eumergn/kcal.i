@@ -240,7 +240,7 @@ export default function OnboardingScreen() {
 
         <View style={styles.navRow} lightColor="transparent" darkColor="transparent">
           {step > 0 && (
-            <Pressable onPress={() => setStep((s) => s - 1)} style={[styles.backButton, { backgroundColor: c.card }]}>
+            <Pressable onPress={() => setStep((s) => s - 1)} style={[styles.backButton, { backgroundColor: c.cardDivider }]}>
               <Text style={[styles.backButtonText, { color: c.text }]}>Back</Text>
             </Pressable>
           )}

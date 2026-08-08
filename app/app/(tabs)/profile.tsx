@@ -19,7 +19,7 @@ export default function ProfileScreen() {
       {session?.user?.email && (
         <Text style={[styles.email, { color: c.secondaryText }]}>Signed in as {session.user.email}</Text>
       )}
-      <Pressable onPress={signOut} style={[styles.signOutButton, { backgroundColor: c.card }]}>
+      <Pressable onPress={signOut} style={[styles.signOutButton, { backgroundColor: c.cardDivider }]}>
         <Text style={[styles.signOutText, { color: c.ringProtein }]}>Sign out</Text>
       </Pressable>
     </View>
