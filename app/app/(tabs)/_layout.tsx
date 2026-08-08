@@ -38,11 +38,13 @@ export default function TabLayout() {
         headerShown: useClientOnlyValue(false, true),
         headerTitleAlign: 'center',
         headerLeft: () => (
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16, gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16, gap: 8 }}>
             <HeaderLogo />
-            {/* System font, not SpaceMono - only its Regular weight is bundled, so a
-                custom TTF with no true bold face would silently render un-bold on iOS. */}
-            <Text style={{ fontSize: 18, fontWeight: '900', letterSpacing: -0.4 }}>kCal.i</Text>
+            {/* Bruno Ace (bundled, single weight) - matches the angular cut-corner
+                wordmark reference exactly. No fontWeight override: forcing a numeric
+                weight on a single-weight custom TTF doesn't bold it, just risks iOS
+                silently ignoring the custom face entirely (same issue as SpaceMono). */}
+            <Text style={{ fontFamily: 'BrunoAce', fontSize: 17 }}>Kcal.i</Text>
           </View>
         ),
         headerRight: () => <ThemeToggleButton />,
