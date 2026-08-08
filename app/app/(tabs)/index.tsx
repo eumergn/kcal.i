@@ -358,6 +358,12 @@ export default function HomeScreen() {
 
   const nextMealId = computeNextMealId(meals, nowMinutes);
 
+  // Only today has a real tracked record - there's no persisted per-day history yet,
+  // so any other selected day must show honest zeros instead of quietly repeating
+  // today's numbers under a different date.
+  const isToday = selectedOffset === 0;
+  const displayTotals = isToday ? totals : { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 };
+
   const handleToggleEaten = (meal: Meal) => {
     const summary = meal.items.map((it) => catalog.find((f) => f.id === it.foodId)?.name).filter(Boolean).join(', ');
     Alert.alert(
@@ -421,7 +427,7 @@ export default function HomeScreen() {
         <View style={[styles.calorieCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
           <View style={styles.calorieTextCol} lightColor="transparent" darkColor="transparent">
             <Text style={styles.calorieValue}>
-              <Text style={{ color: c.text }}>{Math.round(totals.calories)}</Text>
+              <Text style={{ color: c.text }}>{Math.round(displayTotals.calories)}</Text>
               <Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.calories}kcal</Text>
             </Text>
             <Text style={[styles.calorieLabel, { color: c.secondaryText }]}>Calories taken</Text>
@@ -439,7 +445,7 @@ export default function HomeScreen() {
                 },
               ]}
             />
-            <ProgressRing size={88} strokeWidth={6} progress={totals.calories / targets.calories} color={c.ringCalories} track={c.ringTrack}>
+            <ProgressRing size={88} strokeWidth={6} progress={displayTotals.calories / targets.calories} color={c.ringCalories} track={c.ringTrack}>
               <FontAwesome5 name="fire" size={26} color={c.ringCalories} />
             </ProgressRing>
           </View>
@@ -447,29 +453,29 @@ export default function HomeScreen() {
 
         <View style={styles.secondaryRow} lightColor="transparent" darkColor="transparent">
           <View style={[styles.secondaryStat, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-            <ProgressRing size={64} strokeWidth={5} progress={totals.proteinG / targets.proteinG} color={c.ringProtein} track={c.ringTrack}>
+            <ProgressRing size={64} strokeWidth={5} progress={displayTotals.proteinG / targets.proteinG} color={c.ringProtein} track={c.ringTrack}>
               <MaterialCommunityIcons name="food-drumstick" size={22} color={c.ringProtein} />
             </ProgressRing>
             <Text style={[styles.smallRingGrams, { color: c.text }]}>
-              {Math.round(totals.proteinG)}<Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.proteinG}g</Text>
+              {Math.round(displayTotals.proteinG)}<Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.proteinG}g</Text>
             </Text>
             <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Protein taken</Text>
           </View>
           <View style={[styles.secondaryStat, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-            <ProgressRing size={64} strokeWidth={5} progress={totals.carbsG / targets.carbsG} color={c.ringCarbs} track={c.ringTrack}>
+            <ProgressRing size={64} strokeWidth={5} progress={displayTotals.carbsG / targets.carbsG} color={c.ringCarbs} track={c.ringTrack}>
               <FontAwesome5 name="bread-slice" size={19} color={c.ringCarbs} />
             </ProgressRing>
             <Text style={[styles.smallRingGrams, { color: c.text }]}>
-              {Math.round(totals.carbsG)}<Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.carbsG}g</Text>
+              {Math.round(displayTotals.carbsG)}<Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.carbsG}g</Text>
             </Text>
             <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Carbs taken</Text>
           </View>
           <View style={[styles.secondaryStat, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-            <ProgressRing size={64} strokeWidth={5} progress={totals.fatG / targets.fatG} color={c.ringFat} track={c.ringTrack}>
+            <ProgressRing size={64} strokeWidth={5} progress={displayTotals.fatG / targets.fatG} color={c.ringFat} track={c.ringTrack}>
               <FontAwesome5 name="tint" size={19} color={c.ringFat} />
             </ProgressRing>
             <Text style={[styles.smallRingGrams, { color: c.text }]}>
-              {Math.round(totals.fatG)}<Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.fatG}g</Text>
+              {Math.round(displayTotals.fatG)}<Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{targets.fatG}g</Text>
             </Text>
             <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Fat taken</Text>
           </View>
@@ -477,16 +483,21 @@ export default function HomeScreen() {
       </Entrance>
 
       <Entrance delay={90}>
-        <Text style={[styles.sectionTitle, { color: c.text }]}>Today&apos;s meals</Text>
+        <Text style={[styles.sectionTitle, { color: c.text, marginBottom: isToday ? 16 : 4 }]}>{isToday ? "Today's meals" : 'Planned meals'}</Text>
+        {!isToday && (
+          <Text style={[styles.dayNote, { color: c.secondaryText }]}>
+            Eaten tracking only applies to today - this day has no record yet.
+          </Text>
+        )}
         <View style={[styles.mealsCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
           {meals.map((meal, i) => (
             <MealRow
               key={meal.id}
-              meal={meal}
-              isNext={meal.id === nextMealId}
+              meal={isToday ? meal : { ...meal, eaten: false }}
+              isNext={isToday && meal.id === nextMealId}
               isFirst={i === 0}
               colors={c}
-              onPressEaten={() => handleToggleEaten(meal)}
+              onPressEaten={isToday ? () => handleToggleEaten(meal) : () => {}}
               onPressDetail={() => router.push({ pathname: '/meal/[id]', params: { id: meal.id } })}
             />
           ))}
@@ -524,7 +535,8 @@ const styles = StyleSheet.create({
   secondaryLabel: { fontSize: 10, fontWeight: '600', textAlign: 'center' },
   smallRingGrams: { fontFamily: 'SpaceMono', fontSize: 13, fontWeight: '700' },
 
-  sectionTitle: { fontSize: 17, fontWeight: '700', marginTop: 40, marginBottom: 16 },
+  sectionTitle: { fontSize: 17, fontWeight: '700', marginTop: 40, marginBottom: 4 },
+  dayNote: { fontSize: 12, fontWeight: '600', marginBottom: 16 },
   mealsCard: { borderRadius: 20, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth },
   mealRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20, gap: 16, minHeight: 44 },
   mealTimeCol: { width: 48 },

@@ -26,9 +26,9 @@ function TabBarIcon({
   return (
     <View
       style={{
-        width: 42,
-        height: 30,
-        borderRadius: 15,
+        width: 46,
+        height: 46,
+        borderRadius: 23,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: focused ? c.tabActiveBackground : 'transparent',

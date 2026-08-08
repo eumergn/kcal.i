@@ -21,7 +21,7 @@ export function ScanTabButton({ onPress }: { onPress: () => void }) {
         accessibilityRole="button"
         accessibilityLabel="Scan a product barcode"
       >
-        <FontAwesome name="camera" size={22} color={c.background} />
+        <FontAwesome name="camera" size={26} color={c.background} />
       </Pressable>
     </View>
   );
@@ -29,13 +29,14 @@ export function ScanTabButton({ onPress }: { onPress: () => void }) {
 
 const styles = StyleSheet.create({
   slot: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // Taller than the 64pt bar itself and centered on it (no marginTop offset) - it
+  // overflows evenly past both the top and bottom edges instead of just poking above.
   button: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -22,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
