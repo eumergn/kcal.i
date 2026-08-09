@@ -13,6 +13,7 @@ import { useTabSlide } from '@/components/useTabSlide';
 import { AuthTextInput } from '@/components/AuthTextInput';
 import { ChipSelect } from '@/components/ChipSelect';
 import { SegmentedToggle } from '@/components/SegmentedToggle';
+import { cardShadow } from '@/lib/shadow';
 
 const WATER_GOAL_OPTIONS = [1.5, 2, 2.5, 3, 3.5];
 const PERIOD_OPTIONS: { value: BudgetPeriod; label: string }[] = [
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
 
   popover: {
     position: 'absolute', left: 20, right: 20, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 20,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
+    ...cardShadow(6, 0.15, 12, 8),
   },
   popoverTitle: { fontSize: 15, fontWeight: '800', marginBottom: 14 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },

@@ -3,6 +3,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { cardShadow } from '@/lib/shadow';
 
 export function ScanTabButton({ onPress }: { onPress: () => void }) {
   const scheme = useColorScheme() ?? 'light';
@@ -37,10 +38,6 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
+    ...cardShadow(4, 0.35, 8, 6),
   },
 });

@@ -9,6 +9,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { usePlan } from '@/context/PlanContext';
 import { mealTotals, targets } from '@/constants/planData';
 import { startOfToday, buildWeekDays } from '@/lib/dates';
+import { cardShadow } from '@/lib/shadow';
 
 /**
  * A real (if limited) streak: 1 once today's calorie target is met, 0 otherwise.
@@ -89,7 +90,7 @@ const styles = StyleSheet.create({
   popover: {
     position: 'absolute', right: 16, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth,
     padding: 16, minWidth: 260,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
+    ...cardShadow(6, 0.15, 12, 8),
   },
   popoverTitle: { fontSize: 11, fontWeight: '600', letterSpacing: 1.5, marginBottom: 12 },
   popoverRow: { flexDirection: 'row', justifyContent: 'space-between' },

@@ -4,6 +4,7 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { cardShadow } from '@/lib/shadow';
 
 /**
  * A hand-rolled tab bar instead of the library's default BottomTabBar: the default
@@ -85,11 +86,7 @@ const styles = StyleSheet.create({
     bottom: 24,
     height: 64,
     borderRadius: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    ...cardShadow(6, 0.15, 12, 8),
   },
   clip: {
     flex: 1,
