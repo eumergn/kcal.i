@@ -109,7 +109,13 @@ function RootLayoutNav() {
             type Screen" warning. Three states: no account -> auth, account but no
             profile yet -> onboarding, both -> the real app. */}
         <Stack.Protected guard={hasAccount && hasProfile}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          {/* gestureEnabled: false - the tabs root has nothing valid to swipe back to
+              (it isn't pushed onto a history, Stack.Protected swaps it in directly),
+              so an edge-swipe gesture could partially engage and visually shift the
+              whole screen right with no real destination behind it. Navigation within
+              here is via the tab bar, not swipe-back, so disabling it is also correct
+              for the intended UX, not just a workaround. */}
+          <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
           <Stack.Screen name="meal/[id]" options={{ presentation: 'modal', headerShown: true }} />
           <Stack.Screen name="scan" options={{ presentation: 'modal', headerShown: true, title: 'Scan a product' }} />
