@@ -34,10 +34,9 @@ import { usePlan } from '@/context/PlanContext';
 import { useSettings } from '@/context/SettingsContext';
 import { Meal, mealTotals, targets } from '@/constants/planData';
 import { accountCreatedAt } from '@/constants/account';
-import { useTabSlide } from '@/components/useTabSlide';
 import { ProgressRing } from '@/components/ProgressRing';
 import { Entrance } from '@/components/Entrance';
-import { startOfToday, buildWeekDays } from '@/lib/dates';
+import { startOfToday, buildWeekDays, WeekDay } from '@/lib/dates';
 
 const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
 const WATER_STEP_LITERS = 0.25;
@@ -175,6 +174,56 @@ function MealRow({
   );
 }
 
+/**
+ * One week-strip cell: letter + a thin completion ring, both inside one pill.
+ * The selected-state pill is an always-mounted layer that only animates opacity, not
+ * a conditional backgroundColor swap - a conditional swap was the same bug that made
+ * the tab bar's focus pill occasionally render with square corners on Android, so this
+ * uses the identical fix. The ring's own progress-arc color is independent of whether
+ * the cell is selected: it's only ever visible (ringCalories) when that day actually
+ * has real progress, so today's ring stays visible even while a different day (e.g.
+ * Tuesday) is the one currently selected - selection is shown by the pill and the
+ * date number's boldness, not by hiding or recoloring the progress arc.
+ */
+function DayCell({
+  day,
+  isSelected,
+  progress,
+  onPress,
+  colors,
+}: {
+  day: WeekDay;
+  isSelected: boolean;
+  progress: number;
+  onPress: () => void;
+  colors: (typeof Colors)['light'];
+}) {
+  const pillOpacity = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(pillOpacity, { toValue: isSelected ? 1 : 0, duration: 250, easing: EASE_OUT, useNativeDriver: true }).start();
+  }, [isSelected, pillOpacity]);
+
+  const hasProgress = progress > 0;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!day.enabled}
+      style={[styles.dayCell, { opacity: day.enabled ? 1 : 0.3 }]}
+      accessibilityLabel={`${day.letter} ${day.dateNum}${day.isToday ? ', today' : ''}`}
+    >
+      <RNView style={styles.dayPill}>
+        <Animated.View pointerEvents="none" style={[styles.dayPillBg, { backgroundColor: colors.tabActiveBackground, opacity: pillOpacity }]} />
+        <Text style={[styles.dayLetter, { color: colors.secondaryText }]}>{day.letter}</Text>
+        <ProgressRing size={40} strokeWidth={2} progress={progress} color={hasProgress ? colors.ringCalories : colors.ringTrack} track={colors.ringTrack}>
+          <Text style={[styles.dayNum, { color: isSelected ? colors.text : colors.secondaryText }]}>{day.dateNum}</Text>
+        </ProgressRing>
+      </RNView>
+    </Pressable>
+  );
+}
+
 export default function HomeScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
@@ -183,7 +232,6 @@ export default function HomeScreen() {
   const { waterGoalLiters } = useSettings();
   const [selectedOffset, setSelectedOffset] = useState(0);
   const [litersToday, setLitersToday] = useState(0);
-  const slideStyle = useTabSlide('index');
   const today = useMemo(() => startOfToday(), []);
 
   const handleWeekPageEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -266,7 +314,6 @@ export default function HomeScreen() {
   };
 
   return (
-    <Animated.View style={[{ flex: 1 }, slideStyle]}>
     <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.content}>
       <ScrollView
         horizontal
@@ -279,29 +326,16 @@ export default function HomeScreen() {
         {WEEK_OFFSETS.map((weekOffset) => (
           <View key={weekOffset} style={[styles.weekStrip, { width: PAGE_WIDTH }]} lightColor="transparent" darkColor="transparent">
             {buildWeekDays(today, weekOffset, MIN_DAY_OFFSET).map((day) => {
-              const isSelected = day.offset === selectedOffset;
               const dayProgress = day.isToday ? Math.min(totals.calories / targets.calories, 1) : 0;
               return (
-                <Pressable
+                <DayCell
                   key={day.offset}
+                  day={day}
+                  isSelected={day.offset === selectedOffset}
+                  progress={dayProgress}
                   onPress={() => day.enabled && setSelectedOffset(day.offset)}
-                  disabled={!day.enabled}
-                  style={[styles.dayCell, { opacity: day.enabled ? 1 : 0.3 }]}
-                  accessibilityLabel={`${day.letter} ${day.dateNum}${day.isToday ? ', today' : ''}`}
-                >
-                  <Text style={[styles.dayLetter, { color: c.secondaryText }]}>{day.letter}</Text>
-                  <RNView style={[styles.dayRingWrap, { backgroundColor: isSelected ? c.tabActiveBackground : 'transparent' }]}>
-                    <ProgressRing
-                      size={40}
-                      strokeWidth={2}
-                      progress={dayProgress}
-                      color={isSelected ? c.text : c.ringTrack}
-                      track={c.ringTrack}
-                    >
-                      <Text style={[styles.dayNum, { color: isSelected ? c.text : c.secondaryText }]}>{day.dateNum}</Text>
-                    </ProgressRing>
-                  </RNView>
-                </Pressable>
+                  colors={c}
+                />
               );
             })}
           </View>
@@ -417,7 +451,6 @@ export default function HomeScreen() {
         </View>
       </Entrance>
     </ScrollView>
-    </Animated.View>
   );
 }
 
@@ -425,8 +458,9 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 120 },
 
   weekStrip: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
-  dayCell: { alignItems: 'center', gap: 6 },
-  dayRingWrap: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  dayCell: { alignItems: 'center' },
+  dayPill: { alignItems: 'center', gap: 6, paddingHorizontal: 3, paddingVertical: 8, borderRadius: 14 },
+  dayPillBg: { ...StyleSheet.absoluteFillObject, borderRadius: 14 },
   dayLetter: { fontSize: 11, fontWeight: '600' },
   dayNum: { fontSize: 13, fontWeight: '700' },
 

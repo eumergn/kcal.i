@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Animated, Modal, Pressable, ScrollView, StyleSheet, Switch, View as RNView } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Switch, View as RNView } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 import { Text, View } from '@/components/Themed';
@@ -9,7 +9,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useAppTheme } from '@/context/ThemeContext';
 import { useSettings } from '@/context/SettingsContext';
 import { useProfile, BudgetPeriod } from '@/context/ProfileContext';
-import { useTabSlide } from '@/components/useTabSlide';
 import { AuthTextInput } from '@/components/AuthTextInput';
 import { ChipSelect } from '@/components/ChipSelect';
 import { SegmentedToggle } from '@/components/SegmentedToggle';
@@ -31,7 +30,6 @@ export default function ProfileScreen() {
   const { scheme: appScheme, toggle: toggleTheme } = useAppTheme();
   const { units, waterGoalLiters, notificationsEnabled, setUnits, setWaterGoalLiters, setNotificationsEnabled } = useSettings();
   const { profile, updateProfile } = useProfile();
-  const slideStyle = useTabSlide('profile');
 
   const waterRowRef = useRef<RNView>(null);
   const budgetRowRef = useRef<RNView>(null);
@@ -75,7 +73,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <Animated.View style={[{ flex: 1 }, slideStyle]}>
+    <>
       <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.content}>
         <Text style={[styles.title, { color: c.text }]}>Profile</Text>
         {session?.user?.email && (
@@ -215,7 +213,7 @@ export default function ProfileScreen() {
           )}
         </View>
       </Modal>
-    </Animated.View>
+    </>
   );
 }
 

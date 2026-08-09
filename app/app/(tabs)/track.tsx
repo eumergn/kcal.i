@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, TextInput, View as RNView } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View as RNView } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { useTabSlide } from '@/components/useTabSlide';
 import { ProgressRing } from '@/components/ProgressRing';
 import { Entrance } from '@/components/Entrance';
 import { useWeight, WeightEntry } from '@/context/WeightContext';
@@ -47,7 +46,6 @@ const MIN_DAY_OFFSET = -Math.floor((startOfToday().getTime() - accountCreatedAt.
 export default function TrackScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
-  const slideStyle = useTabSlide('track');
   const { entries, goalWeightKg, logWeight } = useWeight();
 
   const [chartWidth, setChartWidth] = useState(0);
@@ -77,8 +75,7 @@ export default function TrackScreen() {
   const loggedToday = entries.some((e) => e.date === today.toISOString().slice(0, 10));
 
   return (
-    <Animated.View style={[{ flex: 1 }, slideStyle]}>
-      <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.content}>
+    <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.content}>
         <Entrance>
           <Text style={[styles.eyebrow, { color: c.secondaryText }]}>WEIGHT</Text>
           <View style={[styles.weightCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
@@ -147,8 +144,7 @@ export default function TrackScreen() {
             </Text>
           </View>
         </Entrance>
-      </ScrollView>
-    </Animated.View>
+    </ScrollView>
   );
 }
 

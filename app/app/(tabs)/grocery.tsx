@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, TextInput, View as RNView } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View as RNView } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -17,7 +17,6 @@ import {
   selectPriceTier,
   staticPriceTable,
 } from '@/constants/groceryData';
-import { useTabSlide } from '@/components/useTabSlide';
 import { ProgressRing } from '@/components/ProgressRing';
 import { useProfile } from '@/context/ProfileContext';
 import { supabase } from '@/lib/supabase';
@@ -128,7 +127,6 @@ export default function GroceryScreen() {
   const [items, setItems] = useState(initialGroceryItems);
   const [tier, setTier] = useState<'budget' | 'premium'>('budget');
   const seededRef = useRef(false);
-  const slideStyle = useTabSlide('grocery');
   const { profile } = useProfile();
 
   // Colorful per-item rings, matching Home's macro palette - only the top "Spent"
@@ -188,7 +186,6 @@ export default function GroceryScreen() {
   };
 
   return (
-    <Animated.View style={[{ flex: 1 }, slideStyle]}>
     <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.content}>
       <Text style={[styles.eyebrow, { color: c.secondaryText }]}>THIS MONTH</Text>
 
@@ -231,7 +228,6 @@ export default function GroceryScreen() {
         Tap a price to edit it if you find it cheaper elsewhere - it updates your monthly total.
       </Text>
     </ScrollView>
-    </Animated.View>
   );
 }
 
