@@ -280,7 +280,14 @@ export default function OnboardingScreen() {
             <Text style={[styles.title, { color: c.text }]}>Let&apos;s get to know you better</Text>
             <Text style={[styles.subtitle, { color: c.secondaryText }]}>This helps us personalize your plan and recommendations.</Text>
             <View style={styles.form} lightColor="transparent" darkColor="transparent">
-              <AuthTextInput placeholder="What should we call you?" value={form.first_name} onChangeText={(t) => update('first_name', t)} />
+              <Text style={[styles.sublabel, { color: c.text, marginTop: 0 }]}>What should we call you?</Text>
+              <AuthTextInput
+                placeholder="Your name"
+                value={form.first_name}
+                onChangeText={(t) => update('first_name', t)}
+                style={[styles.nameInput, { borderColor: c.text }]}
+              />
+              <Text style={[styles.sublabel, { color: c.text, marginTop: 20 }]}>Gender</Text>
               <OptionCard
                 icon={<FontAwesome5 name="mars" size={18} color={c.text} />}
                 label="Male"
@@ -537,6 +544,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, fontWeight: '600', marginBottom: 24, lineHeight: 20 },
   sublabel: { fontSize: 13, fontWeight: '700', marginTop: 8, marginBottom: -2 },
   hintText: { fontSize: 12, fontWeight: '600', textAlign: 'center', marginTop: 4 },
+  nameInput: { fontSize: 17, fontWeight: '700', borderWidth: 1.5, paddingVertical: 16 },
   form: { gap: 12 },
 
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 20, marginTop: 4 },
