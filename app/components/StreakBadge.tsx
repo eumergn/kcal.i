@@ -7,9 +7,11 @@ import { ProgressRing } from '@/components/ProgressRing';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { usePlan } from '@/context/PlanContext';
-import { mealTotals, targets } from '@/constants/planData';
+import { useProfile } from '@/context/ProfileContext';
+import { mealTotals } from '@/constants/planData';
 import { startOfToday, buildWeekDays } from '@/lib/dates';
 import { cardShadow } from '@/lib/shadow';
+import { computeTargets } from '@/lib/nutrition';
 
 /**
  * A real (if limited) streak: 1 once today's calorie target is met, 0 otherwise.
@@ -22,14 +24,16 @@ export function StreakBadge() {
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
   const { meals, catalog } = usePlan();
+  const { profile } = useProfile();
   const badgeRef = useRef<RNView>(null);
   const [visible, setVisible] = useState(false);
   const [anchorTop, setAnchorTop] = useState(0);
 
+  const targetCalories = profile ? computeTargets(profile).calories : 2000;
   const caloriesToday = meals
     .filter((m) => m.eaten)
     .reduce((sum, m) => sum + mealTotals(m.items, catalog).calories, 0);
-  const streak = caloriesToday >= targets.calories * 0.9 ? 1 : 0;
+  const streak = caloriesToday >= targetCalories * 0.9 ? 1 : 0;
 
   const today = useMemo(() => startOfToday(), []);
   const weekDays = useMemo(() => buildWeekDays(today, 0), [today]);

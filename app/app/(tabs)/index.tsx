@@ -32,11 +32,13 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { usePlan } from '@/context/PlanContext';
 import { useSettings } from '@/context/SettingsContext';
-import { Meal, mealTotals, targets } from '@/constants/planData';
+import { useProfile } from '@/context/ProfileContext';
+import { Meal, mealTotals } from '@/constants/planData';
 import { accountCreatedAt } from '@/constants/account';
 import { ProgressRing } from '@/components/ProgressRing';
 import { Entrance } from '@/components/Entrance';
 import { startOfToday, buildWeekDays, WeekDay } from '@/lib/dates';
+import { computeTargets } from '@/lib/nutrition';
 
 const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
 const WATER_STEP_LITERS = 0.25;
@@ -230,9 +232,19 @@ export default function HomeScreen() {
   const router = useRouter();
   const { meals, toggleEaten, catalog } = usePlan();
   const { waterGoalLiters } = useSettings();
+  const { profile } = useProfile();
   const [selectedOffset, setSelectedOffset] = useState(0);
   const [litersToday, setLitersToday] = useState(0);
   const today = useMemo(() => startOfToday(), []);
+
+  // The real, personalized targets computed from this user's actual profile - not the
+  // fixed placeholder every user used to see regardless of their own numbers. Falls
+  // back to a reasonable default only for the brief instant before profile loads (the
+  // tabs route is gated on a profile already existing, so this is momentary).
+  const targets = useMemo(
+    () => (profile ? computeTargets(profile) : { calories: 2000, proteinG: 150, carbsG: 200, fatG: 60, waterLiters: 2.5 }),
+    [profile],
+  );
 
   const handleWeekPageEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / PAGE_WIDTH);

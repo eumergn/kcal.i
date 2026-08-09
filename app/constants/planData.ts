@@ -55,16 +55,6 @@ export const initialMeals: Meal[] = [
   },
 ];
 
-export const targets = {
-  goal: 'Cut',
-  calories: 2192,
-  proteinG: 176,
-  carbsG: 235,
-  fatG: 61,
-  budget: 10,
-  currency: 'EUR',
-};
-
 export function mealTotals(items: MealItem[], catalog: FoodCatalogEntry[]) {
   return items.reduce(
     (acc, item) => {
