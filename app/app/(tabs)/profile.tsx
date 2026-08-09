@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Switch, View as RNView } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
@@ -20,39 +20,56 @@ const PERIOD_OPTIONS: { value: BudgetPeriod; label: string }[] = [
   { value: 'monthly', label: 'Monthly' },
 ];
 
+type PopoverKind = 'water' | 'budget' | null;
+
 export default function ProfileScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
   const { session, signOut } = useAuth();
-  const { toggle: toggleTheme } = useAppTheme();
+  const { scheme: appScheme, toggle: toggleTheme } = useAppTheme();
   const { units, waterGoalLiters, notificationsEnabled, setUnits, setWaterGoalLiters, setNotificationsEnabled } = useSettings();
   const { profile, updateProfile } = useProfile();
   const slideStyle = useTabSlide('profile');
 
-  const [budgetModalVisible, setBudgetModalVisible] = useState(false);
+  const waterRowRef = useRef<RNView>(null);
+  const budgetRowRef = useRef<RNView>(null);
+  const [openPopover, setOpenPopover] = useState<PopoverKind>(null);
+  const [anchorTop, setAnchorTop] = useState(0);
+
+  const [waterDraft, setWaterDraft] = useState(waterGoalLiters);
   const [budgetAmountText, setBudgetAmountText] = useState('');
   const [budgetPeriod, setBudgetPeriodDraft] = useState<BudgetPeriod>('monthly');
   const [savingBudget, setSavingBudget] = useState(false);
 
-  const cycleWaterGoal = () => {
-    const currentIndex = WATER_GOAL_OPTIONS.indexOf(waterGoalLiters);
-    const nextIndex = (currentIndex === -1 ? 0 : currentIndex + 1) % WATER_GOAL_OPTIONS.length;
-    setWaterGoalLiters(WATER_GOAL_OPTIONS[nextIndex]);
+  const openWaterPopover = () => {
+    setWaterDraft(waterGoalLiters);
+    waterRowRef.current?.measureInWindow((_x, y, _w, h) => {
+      setAnchorTop(y + h + 8);
+      setOpenPopover('water');
+    });
   };
 
-  const openBudgetModal = () => {
+  const openBudgetPopover = () => {
     setBudgetAmountText(profile ? String(profile.budget_amount) : '');
     setBudgetPeriodDraft(profile?.budget_period ?? 'monthly');
-    setBudgetModalVisible(true);
+    budgetRowRef.current?.measureInWindow((_x, y, _w, h) => {
+      setAnchorTop(y + h + 8);
+      setOpenPopover('budget');
+    });
   };
 
-  const saveBudget = async () => {
+  const applyWaterGoal = () => {
+    setWaterGoalLiters(waterDraft);
+    setOpenPopover(null);
+  };
+
+  const applyBudget = async () => {
     const parsed = parseFloat(budgetAmountText.replace(',', '.'));
     if (isNaN(parsed) || parsed <= 0) return;
     setSavingBudget(true);
     await updateProfile({ budget_amount: parsed, budget_period: budgetPeriod });
     setSavingBudget(false);
-    setBudgetModalVisible(false);
+    setOpenPopover(null);
   };
 
   return (
@@ -68,39 +85,43 @@ export default function ProfileScreen() {
 
         <Text style={[styles.sectionTitle, { color: c.text }]}>Settings</Text>
         <View style={[styles.settingsCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-          <Pressable
-            onPress={toggleTheme}
-            style={styles.settingsRow}
-            accessibilityRole="button"
-            accessibilityLabel={scheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-          >
+          {/* Instant, no-confirmation changes get a switch, not a chevron - a chevron
+              implies "opens something to review", which a switch doesn't need. */}
+          <View style={styles.settingsRow} lightColor="transparent" darkColor="transparent">
             <RNView style={[styles.settingsIconWrap, { backgroundColor: c.cardDivider }]}>
-              <FontAwesome name={scheme === 'dark' ? 'moon-o' : 'sun-o'} size={16} color={c.text} />
+              <FontAwesome name={appScheme === 'dark' ? 'moon-o' : 'sun-o'} size={16} color={c.text} />
             </RNView>
             <Text style={[styles.settingsLabel, { color: c.text }]}>Theme</Text>
-            <Text style={[styles.settingsValue, { color: c.secondaryText }]}>{scheme === 'dark' ? 'Dark' : 'Light'}</Text>
-            <FontAwesome name="chevron-right" size={13} color={c.secondaryText} />
-          </Pressable>
+            <Text style={[styles.settingsValue, { color: c.secondaryText }]}>{appScheme === 'dark' ? 'Dark' : 'Light'}</Text>
+            <Switch
+              value={appScheme === 'dark'}
+              onValueChange={toggleTheme}
+              trackColor={{ false: c.cardDivider, true: c.text }}
+              thumbColor={c.card}
+            />
+          </View>
 
           <View style={[styles.settingsDivider, { backgroundColor: c.cardDivider }]} lightColor="transparent" darkColor="transparent" />
 
-          <Pressable
-            onPress={() => setUnits(units === 'metric' ? 'imperial' : 'metric')}
-            style={styles.settingsRow}
-            accessibilityRole="button"
-            accessibilityLabel="Change measurement units"
-          >
+          <View style={styles.settingsRow} lightColor="transparent" darkColor="transparent">
             <RNView style={[styles.settingsIconWrap, { backgroundColor: c.cardDivider }]}>
               <FontAwesome name="balance-scale" size={15} color={c.text} />
             </RNView>
             <Text style={[styles.settingsLabel, { color: c.text }]}>Units</Text>
-            <Text style={[styles.settingsValue, { color: c.secondaryText }]}>{units === 'metric' ? 'Metric (kg, cm)' : 'Imperial (lb, in)'}</Text>
-            <FontAwesome name="chevron-right" size={13} color={c.secondaryText} />
-          </Pressable>
+            <Text style={[styles.settingsValue, { color: c.secondaryText }]}>{units === 'metric' ? 'kg, cm' : 'lb, in'}</Text>
+            <Switch
+              value={units === 'imperial'}
+              onValueChange={(v) => setUnits(v ? 'imperial' : 'metric')}
+              trackColor={{ false: c.cardDivider, true: c.text }}
+              thumbColor={c.card}
+            />
+          </View>
 
           <View style={[styles.settingsDivider, { backgroundColor: c.cardDivider }]} lightColor="transparent" darkColor="transparent" />
 
-          <Pressable onPress={cycleWaterGoal} style={styles.settingsRow} accessibilityRole="button" accessibilityLabel="Change daily water goal">
+          {/* These two open something to review before committing, so a chevron is
+              accurate here - it now genuinely means "opens a small panel". */}
+          <Pressable ref={waterRowRef} onPress={openWaterPopover} style={styles.settingsRow} accessibilityRole="button" accessibilityLabel="Change daily water goal">
             <RNView style={[styles.settingsIconWrap, { backgroundColor: c.cardDivider }]}>
               <FontAwesome name="tint" size={15} color={c.text} />
             </RNView>
@@ -111,7 +132,7 @@ export default function ProfileScreen() {
 
           <View style={[styles.settingsDivider, { backgroundColor: c.cardDivider }]} lightColor="transparent" darkColor="transparent" />
 
-          <Pressable onPress={openBudgetModal} style={styles.settingsRow} accessibilityRole="button" accessibilityLabel="Change grocery budget">
+          <Pressable ref={budgetRowRef} onPress={openBudgetPopover} style={styles.settingsRow} accessibilityRole="button" accessibilityLabel="Change grocery budget">
             <RNView style={[styles.settingsIconWrap, { backgroundColor: c.cardDivider }]}>
               <FontAwesome name="money" size={15} color={c.text} />
             </RNView>
@@ -143,36 +164,53 @@ export default function ProfileScreen() {
         </Pressable>
       </ScrollView>
 
-      <Modal visible={budgetModalVisible} transparent animationType="fade" onRequestClose={() => setBudgetModalVisible(false)}>
-        <Pressable style={[styles.modalBackdrop, { backgroundColor: 'rgba(0,0,0,0.4)' }]} onPress={() => setBudgetModalVisible(false)} />
-        <View style={styles.modalWrap} lightColor="transparent" darkColor="transparent">
-          <View style={[styles.modalCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-            <Text style={[styles.modalTitle, { color: c.text }]}>Grocery budget</Text>
-            <Text style={[styles.modalSubtitle, { color: c.secondaryText }]}>
-              How much do you want to spend on groceries, and how often?
-            </Text>
-            <AuthTextInput
-              placeholder="e.g. 150"
-              keyboardType="decimal-pad"
-              value={budgetAmountText}
-              onChangeText={setBudgetAmountText}
-            />
-            <View style={{ marginTop: 14 }} lightColor="transparent" darkColor="transparent">
-              <ChipSelect options={PERIOD_OPTIONS} selected={[budgetPeriod]} onToggle={(v) => setBudgetPeriodDraft(v as BudgetPeriod)} />
-            </View>
-            <View style={styles.modalButtonRow} lightColor="transparent" darkColor="transparent">
-              <Pressable onPress={() => setBudgetModalVisible(false)} style={[styles.modalCancelButton, { backgroundColor: c.cardDivider }]}>
-                <Text style={[styles.modalCancelText, { color: c.text }]}>Cancel</Text>
+      <Modal visible={openPopover !== null} transparent animationType="fade" onRequestClose={() => setOpenPopover(null)}>
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setOpenPopover(null)} />
+        <View style={[styles.popover, { top: anchorTop, backgroundColor: c.card, borderColor: c.cardDivider }]} lightColor="transparent" darkColor="transparent">
+          {openPopover === 'water' && (
+            <>
+              <Text style={[styles.popoverTitle, { color: c.text }]}>Daily water goal</Text>
+              <RNView style={styles.chipRow}>
+                {WATER_GOAL_OPTIONS.map((v) => (
+                  <Pressable
+                    key={v}
+                    onPress={() => setWaterDraft(v)}
+                    style={[
+                      styles.waterChip,
+                      { borderColor: v === waterDraft ? c.text : c.cardDivider, backgroundColor: v === waterDraft ? c.text : 'transparent' },
+                    ]}
+                  >
+                    <Text style={[styles.waterChipText, { color: v === waterDraft ? c.background : c.text }]}>{v.toFixed(1)}L</Text>
+                  </Pressable>
+                ))}
+              </RNView>
+              <Pressable onPress={applyWaterGoal} style={[styles.applyButton, { backgroundColor: c.text }]}>
+                <Text style={[styles.applyButtonText, { color: c.background }]}>Apply</Text>
               </Pressable>
+            </>
+          )}
+
+          {openPopover === 'budget' && (
+            <>
+              <Text style={[styles.popoverTitle, { color: c.text }]}>Grocery budget</Text>
+              <AuthTextInput
+                placeholder="e.g. 150"
+                keyboardType="decimal-pad"
+                value={budgetAmountText}
+                onChangeText={setBudgetAmountText}
+              />
+              <RNView style={{ marginTop: 12 }}>
+                <ChipSelect options={PERIOD_OPTIONS} selected={[budgetPeriod]} onToggle={(v) => setBudgetPeriodDraft(v as BudgetPeriod)} />
+              </RNView>
               <Pressable
-                onPress={saveBudget}
+                onPress={applyBudget}
                 disabled={savingBudget}
-                style={[styles.modalSaveButton, { backgroundColor: c.text, opacity: savingBudget ? 0.5 : 1 }]}
+                style={[styles.applyButton, { backgroundColor: c.text, opacity: savingBudget ? 0.5 : 1 }]}
               >
-                <Text style={[styles.modalSaveText, { color: c.background }]}>Save</Text>
+                <Text style={[styles.applyButtonText, { color: c.background }]}>Apply</Text>
               </Pressable>
-            </View>
-          </View>
+            </>
+          )}
         </View>
       </Modal>
     </Animated.View>
@@ -196,14 +234,14 @@ const styles = StyleSheet.create({
   signOutButton: { borderRadius: 14, paddingHorizontal: 24, paddingVertical: 14, marginTop: 32, alignItems: 'center' },
   signOutText: { fontSize: 14, fontWeight: '700' },
 
-  modalBackdrop: { ...StyleSheet.absoluteFillObject },
-  modalWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  modalCard: { width: '100%', borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 22 },
-  modalTitle: { fontSize: 18, fontWeight: '800', marginBottom: 6 },
-  modalSubtitle: { fontSize: 13, fontWeight: '600', marginBottom: 16, lineHeight: 18 },
-  modalButtonRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
-  modalCancelButton: { flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
-  modalCancelText: { fontSize: 14, fontWeight: '700' },
-  modalSaveButton: { flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
-  modalSaveText: { fontSize: 14, fontWeight: '700' },
+  popover: {
+    position: 'absolute', left: 20, right: 20, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 20,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
+  },
+  popoverTitle: { fontSize: 15, fontWeight: '800', marginBottom: 14 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  waterChip: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10 },
+  waterChipText: { fontSize: 13, fontWeight: '700' },
+  applyButton: { borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 16 },
+  applyButtonText: { fontSize: 14, fontWeight: '700' },
 });

@@ -24,15 +24,23 @@ export function ProgressRing({
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const anim = useRef(new Animated.Value(Math.min(progress, 1))).current;
+  // Grows slightly past 100% instead of just capping the fill - a visible "you went
+  // over" cue for calories/macros/water/budget alike, since they all share this ring.
+  const overshoot = progress > 1;
+  const scaleAnim = useRef(new Animated.Value(overshoot ? 1.08 : 1)).current;
 
   useEffect(() => {
     Animated.timing(anim, { toValue: Math.min(progress, 1), duration: 500, easing: EASE_OUT, useNativeDriver: false }).start();
   }, [progress, anim]);
 
+  useEffect(() => {
+    Animated.timing(scaleAnim, { toValue: overshoot ? 1.08 : 1, duration: 320, easing: EASE_OUT, useNativeDriver: true }).start();
+  }, [overshoot, scaleAnim]);
+
   const strokeDashoffset = anim.interpolate({ inputRange: [0, 1], outputRange: [circumference, 0] });
 
   return (
-    <RNView style={{ width: size, height: size }}>
+    <Animated.View style={{ width: size, height: size, transform: [{ scale: scaleAnim }] }}>
       <Svg width={size} height={size}>
         <Circle cx={size / 2} cy={size / 2} r={radius} stroke={track} strokeWidth={strokeWidth} fill="none" />
         <AnimatedCircle
@@ -52,7 +60,7 @@ export function ProgressRing({
       <RNView style={StyleSheet.absoluteFillObject}>
         <RNView style={styles.center}>{children}</RNView>
       </RNView>
-    </RNView>
+    </Animated.View>
   );
 }
 

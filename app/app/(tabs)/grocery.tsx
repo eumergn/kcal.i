@@ -30,11 +30,13 @@ const defaultIcon = (col: string) => <FontAwesome5 name="shopping-basket" size={
 function GroceryRow({
   item,
   colors,
+  accentColor,
   onChangePrice,
   onAdjustPurchased,
 }: {
   item: GroceryItem;
   colors: (typeof Colors)['light'];
+  accentColor: string;
   onChangePrice: (id: string, text: string) => void;
   onAdjustPurchased: (id: string, delta: number) => void;
 }) {
@@ -53,11 +55,14 @@ function GroceryRow({
   const pct = item.neededGrams > 0 ? item.purchasedGrams / item.neededGrams : 0;
   const remaining = Math.max(item.neededGrams - item.purchasedGrams, 0);
   const renderIcon = ITEM_ICONS[item.id] ?? defaultIcon;
+  // Bought more than the list called for - the ring goes thicker as well as the
+  // shared "grow past 100%" scale effect, since this is the one place both read well together.
+  const strokeWidth = pct > 1 ? 6 : 3;
 
   return (
     <View style={[styles.itemRow, { borderTopColor: colors.cardDivider }]} lightColor="transparent" darkColor="transparent">
-      <ProgressRing size={44} strokeWidth={3} progress={pct} color={colors.ringBudget} track={colors.ringTrack}>
-        {renderIcon(colors.ringBudget)}
+      <ProgressRing size={44} strokeWidth={strokeWidth} progress={pct} color={accentColor} track={colors.ringTrack}>
+        {renderIcon(accentColor)}
       </ProgressRing>
 
       <View style={{ flex: 1, gap: 8 }} lightColor="transparent" darkColor="transparent">
@@ -113,6 +118,10 @@ export default function GroceryScreen() {
   const slideStyle = useTabSlide('grocery');
   const { profile } = useProfile();
 
+  // Colorful per-item rings, matching Home's macro palette - only the top "Spent"
+  // summary ring stays dark gray, not every ring on the screen.
+  const itemAccentColors = [c.ringProtein, c.ringCarbs, c.ringFat, c.ringCalories];
+
   // The exact figure the user set during onboarding (or later edited in Settings),
   // normalized to a monthly amount regardless of which period they entered it in -
   // this used to be a hardcoded placeholder, disconnected from what was actually
@@ -152,11 +161,11 @@ export default function GroceryScreen() {
             <Text style={[styles.budgetTarget, { color: c.secondaryText }]}> / {monthlyBudget.toFixed(2)} EUR</Text>
           </View>
           <Text style={[styles.projectedText, { color: c.secondaryText }]}>
-            Projected {totals.projected.toFixed(2)} EUR - {totals.remaining.toFixed(2)} EUR left to spend
+            Full list would cost {totals.projected.toFixed(2)} EUR - {totals.remaining.toFixed(2)} EUR left in your budget
           </Text>
           {profile && (
             <Text style={[styles.periodText, { color: c.secondaryText }]}>
-              Set to {profile.budget_amount.toFixed(2)} EUR / {profile.budget_period} in your profile
+              From your {profile.budget_period} budget of {profile.budget_amount.toFixed(2)} EUR - change it in Profile &gt; Settings
             </Text>
           )}
         </View>
@@ -172,6 +181,7 @@ export default function GroceryScreen() {
             key={item.id}
             item={item}
             colors={{ ...c, cardDivider: i === 0 ? 'transparent' : c.cardDivider }}
+            accentColor={itemAccentColors[i % itemAccentColors.length]}
             onChangePrice={handleChangePrice}
             onAdjustPurchased={handleAdjustPurchased}
           />

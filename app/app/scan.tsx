@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
@@ -45,6 +45,16 @@ export default function ScanScreen() {
   const c = Colors[scheme];
   const { addFoodToCatalog } = usePlan();
   const [permission, requestPermission] = useCameraPermissions();
+
+  // Ask immediately on entering this screen instead of waiting for a tap - the
+  // native OS dialog only appears once requestPermission() is actually called, so
+  // without this, a first-time user who doesn't notice the "Grant access" button
+  // just sees a static screen and never gets prompted at all.
+  useEffect(() => {
+    if (permission && !permission.granted && permission.canAskAgain) {
+      requestPermission();
+    }
+  }, [permission]);
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,17 +103,28 @@ export default function ScanScreen() {
   };
 
   if (!permission) {
-    return <View style={[styles.center, { backgroundColor: c.background }]} />;
+    return (
+      <View style={[styles.center, { backgroundColor: c.background }]}>
+        <ActivityIndicator color={c.ringCalories} />
+        <Text style={[styles.permissionText, { color: c.secondaryText, marginTop: 16 }]}>Checking camera access...</Text>
+      </View>
+    );
   }
 
   if (!permission.granted) {
     return (
       <View style={[styles.center, { backgroundColor: c.background }]}>
         <FontAwesome name="camera" size={32} color={c.secondaryText} style={{ marginBottom: 16 }} />
-        <Text style={[styles.permissionText, { color: c.text }]}>Camera access is needed to scan product barcodes.</Text>
-        <Pressable onPress={requestPermission} style={[styles.primaryButton, { backgroundColor: c.ringCalories }]}>
-          <Text style={styles.primaryButtonText}>Grant camera access</Text>
-        </Pressable>
+        <Text style={[styles.permissionText, { color: c.text }]}>
+          {permission.canAskAgain
+            ? 'Camera access is needed to scan product barcodes.'
+            : "Camera access was denied. Enable it in your device's Settings app for Expo Go, then come back."}
+        </Text>
+        {permission.canAskAgain && (
+          <Pressable onPress={requestPermission} style={[styles.primaryButton, { backgroundColor: c.ringCalories }]}>
+            <Text style={styles.primaryButtonText}>Grant camera access</Text>
+          </Pressable>
+        )}
       </View>
     );
   }
