@@ -64,33 +64,44 @@ const ITEM_PRICING: Record<string, Record<GroceryCountry, Record<PriceTier, numb
 
 const ITEM_IDS = Object.keys(NEEDED_GRAMS);
 
-export function priceFor(itemId: string, country: GroceryCountry, tier: PriceTier): number {
-  return ITEM_PRICING[itemId]?.[country]?.[tier] ?? 0.5;
+/** Per-item budget/premium prices for one country - the shape the research Edge
+ * Function returns and caches, and what the static ITEM_PRICING table provides as a
+ * fallback when live research hasn't run (or failed) for that country yet. */
+export type CountryPriceTable = Record<string, Record<PriceTier, number>>;
+
+export function staticPriceTable(country: GroceryCountry): CountryPriceTable {
+  const table: CountryPriceTable = {};
+  for (const id of ITEM_IDS) table[id] = ITEM_PRICING[id][country];
+  return table;
+}
+
+export function priceFor(table: CountryPriceTable, itemId: string, tier: PriceTier): number {
+  return table[itemId]?.[tier] ?? 0.5;
 }
 
 /** Totals the full list at a given tier, to compare against the user's budget. */
-export function totalAtTier(country: GroceryCountry, tier: PriceTier): number {
-  return ITEM_IDS.reduce((sum, id) => sum + (NEEDED_GRAMS[id] / 100) * priceFor(id, country, tier), 0);
+export function totalAtTier(table: CountryPriceTable, tier: PriceTier): number {
+  return ITEM_IDS.reduce((sum, id) => sum + (NEEDED_GRAMS[id] / 100) * priceFor(table, id, tier), 0);
 }
 
 /** Premium if the budget comfortably covers it, budget tier otherwise - "cheapest
  * when the budget is tight, best quality when it isn't", as requested. */
-export function selectPriceTier(monthlyBudget: number, country: GroceryCountry): PriceTier {
-  return monthlyBudget >= totalAtTier(country, 'premium') ? 'premium' : 'budget';
+export function selectPriceTier(monthlyBudget: number, table: CountryPriceTable): PriceTier {
+  return monthlyBudget >= totalAtTier(table, 'premium') ? 'premium' : 'budget';
 }
 
-export function buildInitialGroceryItems(country: GroceryCountry, tier: PriceTier): GroceryItem[] {
+export function buildInitialGroceryItems(table: CountryPriceTable, tier: PriceTier): GroceryItem[] {
   return ITEM_IDS.map((id) => ({
     id,
     name: ITEM_NAMES[id],
     neededGrams: NEEDED_GRAMS[id],
-    pricePer100: priceFor(id, country, tier),
+    pricePer100: priceFor(table, id, tier),
     purchasedGrams: 0,
   }));
 }
 
 /** Placeholder-country fallback for screens rendered before the profile loads. */
-export const initialGroceryItems: GroceryItem[] = buildInitialGroceryItems('FR', 'budget');
+export const initialGroceryItems: GroceryItem[] = buildInitialGroceryItems(staticPriceTable('FR'), 'budget');
 
 /** Normalizes whatever period the user set their budget in during onboarding
  * (daily/weekly/monthly) to a single monthly figure for display and progress math. */

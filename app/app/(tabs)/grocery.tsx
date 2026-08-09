@@ -15,10 +15,12 @@ import {
   itemCost,
   normalizeToMonthly,
   selectPriceTier,
+  staticPriceTable,
 } from '@/constants/groceryData';
 import { useTabSlide } from '@/components/useTabSlide';
 import { ProgressRing } from '@/components/ProgressRing';
 import { useProfile } from '@/context/ProfileContext';
+import { supabase } from '@/lib/supabase';
 
 const STEP_GRAMS = 250;
 const WALLET_BROWN = '#8B5E3C';
@@ -141,13 +143,28 @@ export default function GroceryScreen() {
 
   // Seeds real country + tier-appropriate prices once the profile first loads - only
   // once, so later budget edits (which would change the tier) don't wipe purchased
-  // progress the user has already logged.
+  // progress the user has already logged. Prefers live-researched prices (cached in
+  // grocery_price_research by the research-grocery-prices Edge Function, triggered on
+  // signup) and falls back to the static researched table if that row doesn't exist
+  // yet (function hasn't run, failed, or isn't deployed) or the query errors.
   useEffect(() => {
     if (!profile || seededRef.current) return;
     seededRef.current = true;
-    const selectedTier = selectPriceTier(normalizeToMonthly(profile.budget_amount, profile.budget_period), profile.country);
-    setTier(selectedTier);
-    setItems(buildInitialGroceryItems(profile.country, selectedTier));
+
+    (async () => {
+      let table = staticPriceTable(profile.country);
+      const { data } = await supabase
+        .from('grocery_price_research')
+        .select('prices')
+        .eq('country', profile.country)
+        .maybeSingle();
+      if (data?.prices) table = data.prices;
+
+      const monthly = normalizeToMonthly(profile.budget_amount, profile.budget_period);
+      const selectedTier = selectPriceTier(monthly, table);
+      setTier(selectedTier);
+      setItems(buildInitialGroceryItems(table, selectedTier));
+    })();
   }, [profile]);
 
   const totals = useMemo(() => {

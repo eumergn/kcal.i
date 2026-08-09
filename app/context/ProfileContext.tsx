@@ -80,6 +80,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (error) return { error: error.message };
     setProfile(record);
     setStatus('present');
+
+    // Fire-and-forget: refreshes (or seeds) the cached live grocery-price research for
+    // this country. Never blocks onboarding completion on it - it's a background
+    // enhancement, and the Grocery screen already falls back to the static researched
+    // table if this hasn't run yet or fails.
+    supabase.functions.invoke('research-grocery-prices', { body: { country: newProfile.country } }).catch(() => {});
+
     return { error: null };
   };
 
