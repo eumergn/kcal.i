@@ -12,6 +12,7 @@ import { useProfile, BudgetPeriod } from '@/context/ProfileContext';
 import { useTabSlide } from '@/components/useTabSlide';
 import { AuthTextInput } from '@/components/AuthTextInput';
 import { ChipSelect } from '@/components/ChipSelect';
+import { SegmentedToggle } from '@/components/SegmentedToggle';
 
 const WATER_GOAL_OPTIONS = [1.5, 2, 2.5, 3, 3.5];
 const PERIOD_OPTIONS: { value: BudgetPeriod; label: string }[] = [
@@ -85,19 +86,20 @@ export default function ProfileScreen() {
 
         <Text style={[styles.sectionTitle, { color: c.text }]}>Settings</Text>
         <View style={[styles.settingsCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-          {/* Instant, no-confirmation changes get a switch, not a chevron - a chevron
-              implies "opens something to review", which a switch doesn't need. */}
+          {/* Instant, no-confirmation changes get a segmented toggle with both options
+              always labeled - not a chevron, which implies "opens something to review". */}
           <View style={styles.settingsRow} lightColor="transparent" darkColor="transparent">
             <RNView style={[styles.settingsIconWrap, { backgroundColor: c.cardDivider }]}>
               <FontAwesome name={appScheme === 'dark' ? 'moon-o' : 'sun-o'} size={16} color={c.text} />
             </RNView>
             <Text style={[styles.settingsLabel, { color: c.text }]}>Theme</Text>
-            <Text style={[styles.settingsValue, { color: c.secondaryText }]}>{appScheme === 'dark' ? 'Dark' : 'Light'}</Text>
-            <Switch
-              value={appScheme === 'dark'}
-              onValueChange={toggleTheme}
-              trackColor={{ false: c.cardDivider, true: c.text }}
-              thumbColor={c.card}
+            <SegmentedToggle
+              options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]}
+              selected={appScheme}
+              onChange={(v) => {
+                if (v !== appScheme) toggleTheme();
+              }}
+              colors={c}
             />
           </View>
 
@@ -108,12 +110,11 @@ export default function ProfileScreen() {
               <FontAwesome name="balance-scale" size={15} color={c.text} />
             </RNView>
             <Text style={[styles.settingsLabel, { color: c.text }]}>Units</Text>
-            <Text style={[styles.settingsValue, { color: c.secondaryText }]}>{units === 'metric' ? 'kg, cm' : 'lb, in'}</Text>
-            <Switch
-              value={units === 'imperial'}
-              onValueChange={(v) => setUnits(v ? 'imperial' : 'metric')}
-              trackColor={{ false: c.cardDivider, true: c.text }}
-              thumbColor={c.card}
+            <SegmentedToggle
+              options={[{ value: 'metric', label: 'kg, cm' }, { value: 'imperial', label: 'lb, in' }]}
+              selected={units}
+              onChange={setUnits}
+              colors={c}
             />
           </View>
 

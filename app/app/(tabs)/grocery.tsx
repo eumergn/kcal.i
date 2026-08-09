@@ -13,6 +13,7 @@ import { ProgressRing } from '@/components/ProgressRing';
 import { useProfile } from '@/context/ProfileContext';
 
 const STEP_GRAMS = 250;
+const WALLET_BROWN = '#8B5E3C';
 
 const ITEM_ICONS: Record<string, (color: string) => React.ReactNode> = {
   'chicken-breast': (col) => <MaterialCommunityIcons name="food-drumstick" size={17} color={col} />,
@@ -163,14 +164,9 @@ export default function GroceryScreen() {
           <Text style={[styles.projectedText, { color: c.secondaryText }]}>
             Full list would cost {totals.projected.toFixed(2)} EUR - {totals.remaining.toFixed(2)} EUR left in your budget
           </Text>
-          {profile && (
-            <Text style={[styles.periodText, { color: c.secondaryText }]}>
-              From your {profile.budget_period} budget of {profile.budget_amount.toFixed(2)} EUR - change it in Profile &gt; Settings
-            </Text>
-          )}
         </View>
         <ProgressRing size={72} strokeWidth={6} progress={monthlyBudget > 0 ? totals.spent / monthlyBudget : 0} color={c.ringBudget} track={c.ringTrack}>
-          <FontAwesome5 name="wallet" size={22} color={c.ringBudget} />
+          <FontAwesome5 name="wallet" size={22} color={WALLET_BROWN} />
         </ProgressRing>
       </View>
 
@@ -209,7 +205,6 @@ const styles = StyleSheet.create({
   budgetValue: { fontFamily: 'SpaceMono', fontSize: 30, fontWeight: '700', letterSpacing: -0.5 },
   budgetTarget: { fontSize: 13, fontWeight: '600' },
   projectedText: { fontSize: 12, fontWeight: '600', marginTop: 10, lineHeight: 17 },
-  periodText: { fontSize: 11, fontWeight: '600', marginTop: 4 },
 
   sectionTitle: { fontSize: 17, fontWeight: '700', marginBottom: 16 },
   itemsCard: { borderRadius: 20, paddingHorizontal: 20, marginBottom: 24, borderWidth: StyleSheet.hairlineWidth },

@@ -290,15 +290,17 @@ export default function HomeScreen() {
                   accessibilityLabel={`${day.letter} ${day.dateNum}${day.isToday ? ', today' : ''}`}
                 >
                   <Text style={[styles.dayLetter, { color: c.secondaryText }]}>{day.letter}</Text>
-                  <ProgressRing
-                    size={40}
-                    strokeWidth={2}
-                    progress={dayProgress}
-                    color={isSelected ? c.text : c.ringTrack}
-                    track={c.ringTrack}
-                  >
-                    <Text style={[styles.dayNum, { color: isSelected ? c.text : c.secondaryText }]}>{day.dateNum}</Text>
-                  </ProgressRing>
+                  <RNView style={[styles.dayRingWrap, { backgroundColor: isSelected ? c.tabActiveBackground : 'transparent' }]}>
+                    <ProgressRing
+                      size={40}
+                      strokeWidth={2}
+                      progress={dayProgress}
+                      color={isSelected ? c.text : c.ringTrack}
+                      track={c.ringTrack}
+                    >
+                      <Text style={[styles.dayNum, { color: isSelected ? c.text : c.secondaryText }]}>{day.dateNum}</Text>
+                    </ProgressRing>
+                  </RNView>
                 </Pressable>
               );
             })}
@@ -424,6 +426,7 @@ const styles = StyleSheet.create({
 
   weekStrip: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
   dayCell: { alignItems: 'center', gap: 6 },
+  dayRingWrap: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   dayLetter: { fontSize: 11, fontWeight: '600' },
   dayNum: { fontSize: 13, fontWeight: '700' },
 

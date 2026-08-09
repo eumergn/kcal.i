@@ -48,10 +48,24 @@ export function RulerPicker({
   const initialIndex = Math.max(0, Math.min(items.length - 1, closestIndex(value)));
   const lastIndex = useRef(initialIndex);
 
-  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+  const indexFromEvent = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offset = orientation === 'vertical' ? e.nativeEvent.contentOffset.y : e.nativeEvent.contentOffset.x;
-    const index = Math.max(0, Math.min(items.length - 1, Math.round(offset / ITEM_SIZE)));
+    return Math.max(0, Math.min(items.length - 1, Math.round(offset / ITEM_SIZE)));
+  };
+
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = indexFromEvent(e);
     if (index === lastIndex.current) return;
+    lastIndex.current = index;
+    onChange(items[index]);
+  };
+
+  // onScroll alone can miss the exact final rest position - the last event fired
+  // during the gesture doesn't always land exactly where momentum/snap settles, so
+  // the displayed number could end up one tick off from where the ruler visually
+  // stopped. This is the authoritative correction once scrolling has fully settled.
+  const handleMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = indexFromEvent(e);
     lastIndex.current = index;
     onChange(items[index]);
   };
@@ -81,6 +95,7 @@ export function RulerPicker({
           }
           contentOffset={isVertical ? { x: 0, y: initialIndex * ITEM_SIZE } : { x: initialIndex * ITEM_SIZE, y: 0 }}
           onScroll={handleScroll}
+          onMomentumScrollEnd={handleMomentumEnd}
         >
           {items.map((v, i) => {
             const isMajor = i % majorEvery === 0;

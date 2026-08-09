@@ -272,10 +272,6 @@ export default function OnboardingScreen() {
             <Text style={[styles.welcomeSubtitle, { color: c.secondaryText }]}>
               Scan meals, track calories, and shop on a real budget with a plan built around you.
             </Text>
-            <Pressable onPress={() => goToStep(1)} style={[styles.primaryButton, { backgroundColor: c.text, marginTop: 40 }]}>
-              <Text style={[styles.primaryButtonText, { color: c.background }]}>Get Started</Text>
-              <FontAwesome name="arrow-right" size={14} color={c.background} />
-            </Pressable>
           </View>
         )}
 

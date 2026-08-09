@@ -4,7 +4,6 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { slideOutCurrentTab } from '@/components/useTabSlide';
 
 /**
  * A hand-rolled tab bar instead of the library's default BottomTabBar: the default
@@ -36,15 +35,9 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
             return <RNView key={route.key} style={styles.item} />;
           }
 
-          const onPress = async () => {
+          const onPress = () => {
             const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-            if (isFocused || event.defaultPrevented) return;
-            // The outgoing screen slides out first, then the tab swap happens, then
-            // the incoming screen's own useTabSlide focus effect slides it in - both
-            // halves of the transition are now visible instead of just the incoming nudge.
-            const fromRoute = state.routes[state.index].name;
-            await slideOutCurrentTab(fromRoute, route.name);
-            navigation.navigate(route.name);
+            if (!isFocused && !event.defaultPrevented) navigation.navigate(route.name);
           };
 
           const color = isFocused ? c.tabIconSelected : c.tabIconDefault;
