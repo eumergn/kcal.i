@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, TextInput, View as RNView } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
@@ -7,7 +7,15 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { GroceryItem, formatGrams, initialGroceryItems, itemCost, normalizeToMonthly } from '@/constants/groceryData';
+import {
+  GroceryItem,
+  buildInitialGroceryItems,
+  formatGrams,
+  initialGroceryItems,
+  itemCost,
+  normalizeToMonthly,
+  selectPriceTier,
+} from '@/constants/groceryData';
 import { useTabSlide } from '@/components/useTabSlide';
 import { ProgressRing } from '@/components/ProgressRing';
 import { useProfile } from '@/context/ProfileContext';
@@ -116,6 +124,8 @@ export default function GroceryScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
   const [items, setItems] = useState(initialGroceryItems);
+  const [tier, setTier] = useState<'budget' | 'premium'>('budget');
+  const seededRef = useRef(false);
   const slideStyle = useTabSlide('grocery');
   const { profile } = useProfile();
 
@@ -128,6 +138,17 @@ export default function GroceryScreen() {
   // this used to be a hardcoded placeholder, disconnected from what was actually
   // entered, which is the inconsistency this fixes.
   const monthlyBudget = profile ? normalizeToMonthly(profile.budget_amount, profile.budget_period) : 0;
+
+  // Seeds real country + tier-appropriate prices once the profile first loads - only
+  // once, so later budget edits (which would change the tier) don't wipe purchased
+  // progress the user has already logged.
+  useEffect(() => {
+    if (!profile || seededRef.current) return;
+    seededRef.current = true;
+    const selectedTier = selectPriceTier(normalizeToMonthly(profile.budget_amount, profile.budget_period), profile.country);
+    setTier(selectedTier);
+    setItems(buildInitialGroceryItems(profile.country, selectedTier));
+  }, [profile]);
 
   const totals = useMemo(() => {
     const spent = items.reduce((s, it) => s + itemCost(it, it.purchasedGrams), 0);
@@ -170,7 +191,12 @@ export default function GroceryScreen() {
         </ProgressRing>
       </View>
 
-      <Text style={[styles.sectionTitle, { color: c.text }]}>Grocery items</Text>
+      <View style={styles.sectionTitleRow} lightColor="transparent" darkColor="transparent">
+        <Text style={[styles.sectionTitle, { color: c.text }]}>Grocery items</Text>
+        <View style={[styles.tierBadge, { backgroundColor: c.cardDivider }]}>
+          <Text style={[styles.tierBadgeText, { color: c.text }]}>{tier === 'premium' ? 'Quality picks' : 'Budget picks'}</Text>
+        </View>
+      </View>
       <View style={[styles.itemsCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
         {items.map((item, i) => (
           <GroceryRow
@@ -206,7 +232,10 @@ const styles = StyleSheet.create({
   budgetTarget: { fontSize: 13, fontWeight: '600' },
   projectedText: { fontSize: 12, fontWeight: '600', marginTop: 10, lineHeight: 17 },
 
-  sectionTitle: { fontSize: 17, fontWeight: '700', marginBottom: 16 },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  sectionTitle: { fontSize: 17, fontWeight: '700' },
+  tierBadge: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 },
+  tierBadgeText: { fontSize: 11, fontWeight: '700' },
   itemsCard: { borderRadius: 20, paddingHorizontal: 20, marginBottom: 24, borderWidth: StyleSheet.hairlineWidth },
 
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, borderTopWidth: StyleSheet.hairlineWidth },

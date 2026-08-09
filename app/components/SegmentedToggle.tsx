@@ -5,12 +5,19 @@ import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 
 const EASE_INOUT = Easing.inOut(Easing.ease);
+const TRACK_WIDTH = 168;
+const THUMB_INSET = 2;
+const THUMB_WIDTH = (TRACK_WIDTH - THUMB_INSET * 2) / 2;
 
 /**
  * A two-option pill with both labels always visible and a sliding highlight behind
  * whichever is selected - tap either half to jump straight to it. Used in place of a
  * bare Switch wherever the two states aren't self-evident (kg/cm vs lb/in) or the
  * user specifically wants to see and pick a side rather than just flip a toggle.
+ *
+ * The thumb's translateX is computed in fixed pixels, not percentages - percentage
+ * values in a `transform` (as opposed to `width`/`left`, where percentages are fine)
+ * are unreliable on native RN and the thumb would just never visibly move.
  */
 export function SegmentedToggle<T extends string>({
   options,
@@ -30,7 +37,7 @@ export function SegmentedToggle<T extends string>({
     Animated.timing(slide, { toValue: selectedIndex, duration: 220, easing: EASE_INOUT, useNativeDriver: true }).start();
   }, [selectedIndex, slide]);
 
-  const thumbTranslateX = slide.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+  const thumbTranslateX = slide.interpolate({ inputRange: [0, 1], outputRange: [0, THUMB_WIDTH] });
 
   return (
     <RNView style={[styles.track, { backgroundColor: colors.cardDivider }]}>
@@ -48,8 +55,8 @@ export function SegmentedToggle<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  track: { flexDirection: 'row', borderRadius: 16, height: 36, width: 168, overflow: 'hidden' },
-  thumb: { position: 'absolute', top: 2, left: 2, bottom: 2, width: '50%', borderRadius: 14 },
+  track: { flexDirection: 'row', borderRadius: 16, height: 36, width: TRACK_WIDTH, overflow: 'hidden' },
+  thumb: { position: 'absolute', top: THUMB_INSET, left: THUMB_INSET, bottom: THUMB_INSET, width: THUMB_WIDTH, borderRadius: 14 },
   half: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   label: { fontSize: 12, fontWeight: '700' },
 });

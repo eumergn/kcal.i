@@ -1,8 +1,10 @@
 /**
- * Placeholder monthly grocery data - quantities are the daily meal-plan grams
- * (from planData.ts's meal descriptions) scaled to ~30 days. Prices are the cheapest
- * FR store price per 100g from engine/src/sampleData.ts. All illustrative until the
- * real engine/backend is wired up - see README.
+ * Grocery quantities are the daily meal-plan grams (from planData.ts's meal
+ * descriptions) scaled to ~30 days. Prices are informed estimates of typical French
+ * and German supermarket price ranges (budget/discount vs premium/quality tier),
+ * not a live scraped feed - there's no market-price API wired up, so this is the
+ * honest ceiling of what a static dataset can offer. Update ITEM_PRICING if better
+ * sourced numbers become available.
  */
 export type GroceryItem = {
   id: string;
@@ -15,17 +17,80 @@ export type GroceryItem = {
   purchasedGrams: number;
 };
 
-export const initialGroceryItems: GroceryItem[] = [
-  { id: 'chicken-breast', name: 'Chicken breast', neededGrams: 3000, pricePer100: 0.95, purchasedGrams: 1200 },
-  { id: 'oats', name: 'Oats', neededGrams: 2130, pricePer100: 0.28, purchasedGrams: 2130 },
-  { id: 'carrots', name: 'Carrots', neededGrams: 14400, pricePer100: 0.08, purchasedGrams: 6000 },
-  { id: 'tuna-canned', name: 'Canned tuna', neededGrams: 3240, pricePer100: 1.1, purchasedGrams: 1080 },
-  { id: 'bread', name: 'Whole grain bread', neededGrams: 3420, pricePer100: 0.35, purchasedGrams: 1710 },
-  { id: 'ground-beef', name: 'Ground beef', neededGrams: 5490, pricePer100: 1.5, purchasedGrams: 0 },
-  { id: 'rice', name: 'White rice', neededGrams: 5010, pricePer100: 0.1, purchasedGrams: 5010 },
-  { id: 'eggs', name: 'Eggs', neededGrams: 7890, pricePer100: 0.28, purchasedGrams: 3945 },
-  { id: 'pasta', name: 'Whole wheat pasta', neededGrams: 5250, pricePer100: 0.15, purchasedGrams: 0 },
-];
+const NEEDED_GRAMS: Record<string, number> = {
+  'chicken-breast': 3000,
+  oats: 2130,
+  carrots: 14400,
+  'tuna-canned': 3240,
+  bread: 3420,
+  'ground-beef': 5490,
+  rice: 5010,
+  eggs: 7890,
+  pasta: 5250,
+};
+
+const ITEM_NAMES: Record<string, string> = {
+  'chicken-breast': 'Chicken breast',
+  oats: 'Oats',
+  carrots: 'Carrots',
+  'tuna-canned': 'Canned tuna',
+  bread: 'Whole grain bread',
+  'ground-beef': 'Ground beef',
+  rice: 'White rice',
+  eggs: 'Eggs',
+  pasta: 'Whole wheat pasta',
+};
+
+export type PriceTier = 'budget' | 'premium';
+export type GroceryCountry = 'FR' | 'DE';
+
+/**
+ * EUR per 100g, budget (discount-store) vs premium (quality/organic-leaning) tier,
+ * per country. France runs consistently higher than Germany for groceries generally -
+ * a well-documented gap, not a rounding choice. Germany's discount grocers (Lidl,
+ * Aldi) set an unusually low budget floor that France's market doesn't match.
+ */
+const ITEM_PRICING: Record<string, Record<GroceryCountry, Record<PriceTier, number>>> = {
+  'chicken-breast': { FR: { budget: 0.9, premium: 1.6 }, DE: { budget: 0.75, premium: 1.35 } },
+  oats: { FR: { budget: 0.25, premium: 0.55 }, DE: { budget: 0.2, premium: 0.45 } },
+  carrots: { FR: { budget: 0.09, premium: 0.22 }, DE: { budget: 0.07, premium: 0.18 } },
+  'tuna-canned': { FR: { budget: 1.0, premium: 2.2 }, DE: { budget: 0.85, premium: 1.9 } },
+  bread: { FR: { budget: 0.35, premium: 0.75 }, DE: { budget: 0.28, premium: 0.6 } },
+  'ground-beef': { FR: { budget: 1.3, premium: 2.4 }, DE: { budget: 1.1, premium: 2.1 } },
+  rice: { FR: { budget: 0.15, premium: 0.4 }, DE: { budget: 0.12, premium: 0.35 } },
+  eggs: { FR: { budget: 0.3, premium: 0.55 }, DE: { budget: 0.25, premium: 0.45 } },
+  pasta: { FR: { budget: 0.18, premium: 0.42 }, DE: { budget: 0.15, premium: 0.38 } },
+};
+
+const ITEM_IDS = Object.keys(NEEDED_GRAMS);
+
+export function priceFor(itemId: string, country: GroceryCountry, tier: PriceTier): number {
+  return ITEM_PRICING[itemId]?.[country]?.[tier] ?? 0.5;
+}
+
+/** Totals the full list at a given tier, to compare against the user's budget. */
+export function totalAtTier(country: GroceryCountry, tier: PriceTier): number {
+  return ITEM_IDS.reduce((sum, id) => sum + (NEEDED_GRAMS[id] / 100) * priceFor(id, country, tier), 0);
+}
+
+/** Premium if the budget comfortably covers it, budget tier otherwise - "cheapest
+ * when the budget is tight, best quality when it isn't", as requested. */
+export function selectPriceTier(monthlyBudget: number, country: GroceryCountry): PriceTier {
+  return monthlyBudget >= totalAtTier(country, 'premium') ? 'premium' : 'budget';
+}
+
+export function buildInitialGroceryItems(country: GroceryCountry, tier: PriceTier): GroceryItem[] {
+  return ITEM_IDS.map((id) => ({
+    id,
+    name: ITEM_NAMES[id],
+    neededGrams: NEEDED_GRAMS[id],
+    pricePer100: priceFor(id, country, tier),
+    purchasedGrams: 0,
+  }));
+}
+
+/** Placeholder-country fallback for screens rendered before the profile loads. */
+export const initialGroceryItems: GroceryItem[] = buildInitialGroceryItems('FR', 'budget');
 
 /** Normalizes whatever period the user set their budget in during onboarding
  * (daily/weekly/monthly) to a single monthly figure for display and progress math. */
