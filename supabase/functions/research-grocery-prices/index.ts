@@ -1,5 +1,5 @@
 // Supabase Edge Function (Deno runtime). Researches current budget/premium grocery
-// prices for a country via an LLM with web search, caches the result in
+// prices for a country via Gemini with Google Search grounding, caches the result in
 // public.grocery_price_research. Called from the app right after onboarding submits
 // (see context/ProfileContext.tsx's createProfile), and only re-researches if the
 // cached row for that country is missing or older than 30 days - the prices aren't
@@ -7,7 +7,7 @@
 // instead of paying for it again.
 //
 // Required secrets (set via `supabase secrets set NAME=value`, never commit these):
-//   ANTHROPIC_API_KEY   - billed API key, server-side only, never in app code
+//   GEMINI_API_KEY   - free-tier Google AI Studio key, server-side only, never in app code
 // Already available automatically in every Edge Function:
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
@@ -26,7 +26,7 @@ const ITEMS: Record<string, string> = {
 };
 
 const STALE_AFTER_DAYS = 30;
-const ANTHROPIC_MODEL = 'claude-sonnet-4-5-20250929'; // confirm current model id before deploying
+const GEMINI_MODEL = 'gemini-flash-latest'; // Google-maintained alias for the current flash model - avoids hardcoding a dated snapshot that later gets deprecated (a pinned "gemini-2.5-flash" already 404'd for new API keys once)
 
 type Tier = 'budget' | 'premium';
 type PriceTable = Record<string, Record<Tier, number>>;
@@ -41,39 +41,34 @@ For each item, find:
 - "budget": a typical price at a discount/budget supermarket (e.g. Lidl, Aldi, Action) in EUR per 100g
 - "premium": a typical price for a quality/organic option at a mainstream or premium supermarket in EUR per 100g
 
-Respond with ONLY a JSON object, no other text, in exactly this shape:
+Respond with ONLY a JSON object, no other text, no markdown code fences, in exactly this shape:
 {"chicken-breast":{"budget":0.00,"premium":0.00},"oats":{"budget":0.00,"premium":0.00}, ...one entry per item id above...}`;
 }
 
 async function researchCountry(country: 'FR' | 'DE'): Promise<PriceTable> {
-  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set');
+  const apiKey = Deno.env.get('GEMINI_API_KEY');
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: buildPrompt(country) }] }],
+        tools: [{ google_search: {} }],
+      }),
     },
-    body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 1024,
-      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }],
-      messages: [{ role: 'user', content: buildPrompt(country) }],
-    }),
-  });
+  );
 
-  if (!res.ok) throw new Error(`Anthropic API error ${res.status}: ${await res.text()}`);
+  if (!res.ok) throw new Error(`Gemini API error ${res.status}: ${await res.text()}`);
   const data = await res.json();
 
-  // The final text block should be the JSON object; web search results are separate
-  // content blocks earlier in the response and are ignored here.
-  const textBlock = (data.content ?? []).findLast?.((b: { type: string }) => b.type === 'text')
-    ?? [...(data.content ?? [])].reverse().find((b: { type: string }) => b.type === 'text');
-  if (!textBlock?.text) throw new Error('No text block in Anthropic response');
+  const parts = data.candidates?.[0]?.content?.parts ?? [];
+  const text: string = parts.map((p: { text?: string }) => p.text ?? '').join('');
+  if (!text) throw new Error('No text in Gemini response');
 
-  const jsonMatch = textBlock.text.match(/\{[\s\S]*\}/);
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('No JSON object found in model response');
 
   const parsed = JSON.parse(jsonMatch[0]) as PriceTable;
