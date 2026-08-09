@@ -302,6 +302,9 @@ export default function OnboardingScreen() {
                 onPress={() => update('sex', 'other')}
                 colors={c}
               />
+              {form.first_name.trim() === '' && (
+                <Text style={[styles.hintText, { color: c.secondaryText }]}>Enter your name above to continue.</Text>
+              )}
             </View>
           </>
         )}
@@ -533,6 +536,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', marginBottom: 8 },
   subtitle: { fontSize: 14, fontWeight: '600', marginBottom: 24, lineHeight: 20 },
   sublabel: { fontSize: 13, fontWeight: '700', marginTop: 8, marginBottom: -2 },
+  hintText: { fontSize: 12, fontWeight: '600', textAlign: 'center', marginTop: 4 },
   form: { gap: 12 },
 
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 20, marginTop: 4 },
