@@ -3,6 +3,7 @@ import { ActivityIndicator, Animated, Easing, KeyboardAvoidingView, LayoutAnimat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { Text, View } from '@/components/Themed';
 import { AuthTextInput } from '@/components/AuthTextInput';
@@ -461,7 +462,7 @@ export default function OnboardingScreen() {
             <Text style={[styles.resultUnit, { color: c.secondaryText }]}>Calories / day</Text>
             <View style={styles.macroRow} lightColor="transparent" darkColor="transparent">
               <View style={[styles.macroChip, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-                <FontAwesome5 name="drumstick-bite" size={16} color={c.ringProtein} />
+                <MaterialCommunityIcons name="food-drumstick" size={17} color={c.ringProtein} />
                 <Text style={[styles.macroValue, { color: c.text }]}>{targets.proteinG}g</Text>
                 <Text style={[styles.macroLabel, { color: c.secondaryText }]}>Protein</Text>
               </View>

@@ -7,14 +7,15 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { GroceryItem, formatGrams, initialGroceryItems, itemCost, monthlyBudget } from '@/constants/groceryData';
+import { GroceryItem, formatGrams, initialGroceryItems, itemCost, normalizeToMonthly } from '@/constants/groceryData';
 import { useTabSlide } from '@/components/useTabSlide';
 import { ProgressRing } from '@/components/ProgressRing';
+import { useProfile } from '@/context/ProfileContext';
 
 const STEP_GRAMS = 250;
 
 const ITEM_ICONS: Record<string, (color: string) => React.ReactNode> = {
-  'chicken-breast': (col) => <FontAwesome5 name="drumstick-bite" size={16} color={col} />,
+  'chicken-breast': (col) => <MaterialCommunityIcons name="food-drumstick" size={17} color={col} />,
   oats: (col) => <MaterialCommunityIcons name="bowl-mix" size={17} color={col} />,
   carrots: (col) => <FontAwesome5 name="carrot" size={16} color={col} />,
   'tuna-canned': (col) => <FontAwesome5 name="fish" size={16} color={col} />,
@@ -110,12 +111,19 @@ export default function GroceryScreen() {
   const c = Colors[scheme];
   const [items, setItems] = useState(initialGroceryItems);
   const slideStyle = useTabSlide('grocery');
+  const { profile } = useProfile();
+
+  // The exact figure the user set during onboarding (or later edited in Settings),
+  // normalized to a monthly amount regardless of which period they entered it in -
+  // this used to be a hardcoded placeholder, disconnected from what was actually
+  // entered, which is the inconsistency this fixes.
+  const monthlyBudget = profile ? normalizeToMonthly(profile.budget_amount, profile.budget_period) : 0;
 
   const totals = useMemo(() => {
     const spent = items.reduce((s, it) => s + itemCost(it, it.purchasedGrams), 0);
     const projected = items.reduce((s, it) => s + itemCost(it, it.neededGrams), 0);
     return { spent, projected, remaining: monthlyBudget - spent };
-  }, [items]);
+  }, [items, monthlyBudget]);
 
   const handleChangePrice = (id: string, text: string) => {
     const parsed = parseFloat(text.replace(',', '.'));
@@ -146,8 +154,13 @@ export default function GroceryScreen() {
           <Text style={[styles.projectedText, { color: c.secondaryText }]}>
             Projected {totals.projected.toFixed(2)} EUR - {totals.remaining.toFixed(2)} EUR left to spend
           </Text>
+          {profile && (
+            <Text style={[styles.periodText, { color: c.secondaryText }]}>
+              Set to {profile.budget_amount.toFixed(2)} EUR / {profile.budget_period} in your profile
+            </Text>
+          )}
         </View>
-        <ProgressRing size={72} strokeWidth={6} progress={totals.spent / monthlyBudget} color={c.ringBudget} track={c.ringTrack}>
+        <ProgressRing size={72} strokeWidth={6} progress={monthlyBudget > 0 ? totals.spent / monthlyBudget : 0} color={c.ringBudget} track={c.ringTrack}>
           <FontAwesome5 name="wallet" size={22} color={c.ringBudget} />
         </ProgressRing>
       </View>
@@ -186,6 +199,7 @@ const styles = StyleSheet.create({
   budgetValue: { fontFamily: 'SpaceMono', fontSize: 30, fontWeight: '700', letterSpacing: -0.5 },
   budgetTarget: { fontSize: 13, fontWeight: '600' },
   projectedText: { fontSize: 12, fontWeight: '600', marginTop: 10, lineHeight: 17 },
+  periodText: { fontSize: 11, fontWeight: '600', marginTop: 4 },
 
   sectionTitle: { fontSize: 17, fontWeight: '700', marginBottom: 16 },
   itemsCard: { borderRadius: 20, paddingHorizontal: 20, marginBottom: 24, borderWidth: StyleSheet.hairlineWidth },

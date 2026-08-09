@@ -31,6 +31,7 @@ import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { usePlan } from '@/context/PlanContext';
+import { useSettings } from '@/context/SettingsContext';
 import { Meal, mealTotals, targets } from '@/constants/planData';
 import { accountCreatedAt } from '@/constants/account';
 import { useTabSlide } from '@/components/useTabSlide';
@@ -39,6 +40,7 @@ import { Entrance } from '@/components/Entrance';
 import { startOfToday, buildWeekDays } from '@/lib/dates';
 
 const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
+const WATER_STEP_LITERS = 0.25;
 
 /** The earliest day the strip is allowed to reach - can't view history from before the account existed. */
 const MIN_DAY_OFFSET = -Math.floor((startOfToday().getTime() - accountCreatedAt.getTime()) / 86400000);
@@ -178,7 +180,9 @@ export default function HomeScreen() {
   const c = Colors[scheme];
   const router = useRouter();
   const { meals, toggleEaten, catalog } = usePlan();
+  const { waterGoalLiters } = useSettings();
   const [selectedOffset, setSelectedOffset] = useState(0);
+  const [litersToday, setLitersToday] = useState(0);
   const slideStyle = useTabSlide('index');
   const today = useMemo(() => startOfToday(), []);
 
@@ -359,6 +363,34 @@ export default function HomeScreen() {
             <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Fat taken</Text>
           </View>
         </View>
+
+        <View style={[styles.waterCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
+          <ProgressRing size={48} strokeWidth={4} progress={litersToday / waterGoalLiters} color={c.ringCarbs} track={c.ringTrack}>
+            <FontAwesome5 name="tint" size={16} color={c.ringCarbs} />
+          </ProgressRing>
+          <View style={{ flex: 1 }} lightColor="transparent" darkColor="transparent">
+            <Text style={styles.waterValue}>
+              <Text style={{ color: c.text }}>{litersToday.toFixed(2)}</Text>
+              <Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{waterGoalLiters.toFixed(1)}L</Text>
+            </Text>
+            <Text style={[styles.secondaryLabel, { color: c.secondaryText, textAlign: 'left' }]}>Water taken</Text>
+          </View>
+          <RNView style={styles.waterButtons}>
+            <Pressable
+              onPress={() => setLitersToday((n) => Math.max(0, Math.round((n - WATER_STEP_LITERS) * 100) / 100))}
+              disabled={litersToday <= 0}
+              style={[styles.waterStepperButton, { backgroundColor: c.cardDivider, opacity: litersToday <= 0 ? 0.4 : 1 }]}
+            >
+              <FontAwesome name="minus" size={11} color={c.text} />
+            </Pressable>
+            <Pressable
+              onPress={() => setLitersToday((n) => Math.round((n + WATER_STEP_LITERS) * 100) / 100)}
+              style={[styles.waterStepperButton, { backgroundColor: c.cardDivider }]}
+            >
+              <FontAwesome name="plus" size={11} color={c.text} />
+            </Pressable>
+          </RNView>
+        </View>
       </Entrance>
 
       <Entrance delay={90}>
@@ -412,6 +444,14 @@ const styles = StyleSheet.create({
   },
   secondaryLabel: { fontSize: 10, fontWeight: '600', textAlign: 'center' },
   smallRingGrams: { fontFamily: 'SpaceMono', fontSize: 13, fontWeight: '700' },
+
+  waterCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 12,
+    borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, padding: 14,
+  },
+  waterValue: { fontFamily: 'SpaceMono', fontSize: 16, fontWeight: '700' },
+  waterButtons: { flexDirection: 'row', gap: 8 },
+  waterStepperButton: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
 
   sectionTitle: { fontSize: 17, fontWeight: '700', marginTop: 40, marginBottom: 4 },
   dayNote: { fontSize: 12, fontWeight: '600', marginBottom: 16 },

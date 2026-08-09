@@ -14,11 +14,13 @@ let lastTabIndex = 0;
  * Gives each tab screen a directional slide-in on focus: sliding in from the right
  * when moving to a tab further right in the bar, from the left when moving further
  * left - so gliding home -> track -> grocery -> profile (and back) feels like paging
- * across a filmstrip instead of an instant cut.
+ * across a filmstrip instead of an instant cut. Position only, no opacity - an
+ * interrupted opacity animation (fast repeated tab switches) could leave a screen
+ * visibly dimmed until the next focus event, which read as "unavailable" rather than
+ * "mid-transition".
  */
 export function useTabSlide(routeName: string) {
   const translateX = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
 
   useFocusEffect(
     useCallback(() => {
@@ -29,13 +31,9 @@ export function useTabSlide(routeName: string) {
       if (direction === 0) return;
 
       translateX.setValue(direction * 32);
-      opacity.setValue(0.5);
-      Animated.parallel([
-        Animated.timing(translateX, { toValue: 0, duration: 280, easing: EASE_OUT, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 1, duration: 220, easing: EASE_OUT, useNativeDriver: true }),
-      ]).start();
+      Animated.timing(translateX, { toValue: 0, duration: 280, easing: EASE_OUT, useNativeDriver: true }).start();
     }, [routeName]),
   );
 
-  return { transform: [{ translateX }], opacity };
+  return { transform: [{ translateX }] };
 }

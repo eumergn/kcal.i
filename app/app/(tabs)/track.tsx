@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, TextInput, View as RNView } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
@@ -11,11 +9,8 @@ import { useTabSlide } from '@/components/useTabSlide';
 import { ProgressRing } from '@/components/ProgressRing';
 import { Entrance } from '@/components/Entrance';
 import { useWeight, WeightEntry } from '@/context/WeightContext';
-import { useSettings } from '@/context/SettingsContext';
 import { accountCreatedAt } from '@/constants/account';
 import { startOfToday, buildMonthDays } from '@/lib/dates';
-
-const WATER_STEP_LITERS = 0.25;
 
 /** A hand-drawn line, not a charting library - same "own the primitive" approach as
  * ProgressRing. Only renders once there are at least two points to connect. */
@@ -54,11 +49,9 @@ export default function TrackScreen() {
   const c = Colors[scheme];
   const slideStyle = useTabSlide('track');
   const { entries, goalWeightKg, logWeight } = useWeight();
-  const { waterGoalLiters } = useSettings();
 
   const [chartWidth, setChartWidth] = useState(0);
   const [weightInput, setWeightInput] = useState('');
-  const [litersToday, setLitersToday] = useState(0);
 
   const latestEntry = entries[entries.length - 1];
   const firstEntry = entries[0];
@@ -79,8 +72,9 @@ export default function TrackScreen() {
   const today = useMemo(() => startOfToday(), []);
   const monthDays = useMemo(() => buildMonthDays(today, MIN_DAY_OFFSET), [today]);
   const monthLabel = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  // Only today has a real completion record - see Home's week strip for the same rule.
-  const todayHitGoal = litersToday >= waterGoalLiters;
+  // "Completed" here means a real weight entry exists for today - the one honest
+  // signal this screen has, distinct from Home's calorie-based streak.
+  const loggedToday = entries.some((e) => e.date === today.toISOString().slice(0, 10));
 
   return (
     <Animated.View style={[{ flex: 1 }, slideStyle]}>
@@ -139,7 +133,7 @@ export default function TrackScreen() {
                   <ProgressRing
                     size={30}
                     strokeWidth={2}
-                    progress={day.isToday && todayHitGoal ? 1 : 0}
+                    progress={day.isToday && loggedToday ? 1 : 0}
                     color={day.isToday ? c.text : c.ringTrack}
                     track={c.ringTrack}
                   >
@@ -151,37 +145,6 @@ export default function TrackScreen() {
             <Text style={[styles.chartHint, { color: c.secondaryText, marginTop: 14 }]}>
               Only today has a real record so far - the rest of the month fills in as you go.
             </Text>
-          </View>
-        </Entrance>
-
-        <Entrance delay={140}>
-          <Text style={[styles.eyebrow, { color: c.secondaryText, marginTop: 32 }]}>WATER</Text>
-          <View style={[styles.waterCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-            <ProgressRing size={64} strokeWidth={5} progress={litersToday / waterGoalLiters} color={c.ringCarbs} track={c.ringTrack}>
-              <FontAwesome5 name="tint" size={20} color={c.ringCarbs} />
-            </ProgressRing>
-            <View style={{ flex: 1 }} lightColor="transparent" darkColor="transparent">
-              <Text style={styles.waterValue}>
-                <Text style={{ color: c.text }}>{litersToday.toFixed(2)}</Text>
-                <Text style={{ color: c.secondaryText, fontWeight: '600' }}>/{waterGoalLiters.toFixed(1)} L</Text>
-              </Text>
-              <Text style={[styles.weightLabel, { color: c.secondaryText }]}>Water today</Text>
-            </View>
-            <RNView style={styles.waterButtons}>
-              <Pressable
-                onPress={() => setLitersToday((n) => Math.max(0, Math.round((n - WATER_STEP_LITERS) * 100) / 100))}
-                disabled={litersToday <= 0}
-                style={[styles.stepperButton, { backgroundColor: c.cardDivider, opacity: litersToday <= 0 ? 0.4 : 1 }]}
-              >
-                <FontAwesome name="minus" size={13} color={c.text} />
-              </Pressable>
-              <Pressable
-                onPress={() => setLitersToday((n) => Math.round((n + WATER_STEP_LITERS) * 100) / 100)}
-                style={[styles.stepperButton, { backgroundColor: c.cardDivider }]}
-              >
-                <FontAwesome name="plus" size={13} color={c.text} />
-              </Pressable>
-            </RNView>
           </View>
         </Entrance>
       </ScrollView>
@@ -214,9 +177,4 @@ const styles = StyleSheet.create({
   monthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   monthCell: { alignItems: 'center', justifyContent: 'center' },
   monthDayNum: { fontSize: 11, fontWeight: '700' },
-
-  waterCard: { flexDirection: 'row', alignItems: 'center', gap: 16, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 20 },
-  waterValue: { fontFamily: 'SpaceMono', fontSize: 22, fontWeight: '700' },
-  waterButtons: { gap: 10 },
-  stepperButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
 });

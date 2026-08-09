@@ -1,4 +1,5 @@
-import { Animated, Pressable, ScrollView, StyleSheet, Switch, View as RNView } from 'react-native';
+import { useState } from 'react';
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, Switch, View as RNView } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 import { Text, View } from '@/components/Themed';
@@ -7,22 +8,51 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/context/AuthContext';
 import { useAppTheme } from '@/context/ThemeContext';
 import { useSettings } from '@/context/SettingsContext';
+import { useProfile, BudgetPeriod } from '@/context/ProfileContext';
 import { useTabSlide } from '@/components/useTabSlide';
+import { AuthTextInput } from '@/components/AuthTextInput';
+import { ChipSelect } from '@/components/ChipSelect';
 
 const WATER_GOAL_OPTIONS = [1.5, 2, 2.5, 3, 3.5];
+const PERIOD_OPTIONS: { value: BudgetPeriod; label: string }[] = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+];
 
 export default function ProfileScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
   const { session, signOut } = useAuth();
-  const { toggleFrom } = useAppTheme();
+  const { toggle: toggleTheme } = useAppTheme();
   const { units, waterGoalLiters, notificationsEnabled, setUnits, setWaterGoalLiters, setNotificationsEnabled } = useSettings();
+  const { profile, updateProfile } = useProfile();
   const slideStyle = useTabSlide('profile');
+
+  const [budgetModalVisible, setBudgetModalVisible] = useState(false);
+  const [budgetAmountText, setBudgetAmountText] = useState('');
+  const [budgetPeriod, setBudgetPeriodDraft] = useState<BudgetPeriod>('monthly');
+  const [savingBudget, setSavingBudget] = useState(false);
 
   const cycleWaterGoal = () => {
     const currentIndex = WATER_GOAL_OPTIONS.indexOf(waterGoalLiters);
     const nextIndex = (currentIndex === -1 ? 0 : currentIndex + 1) % WATER_GOAL_OPTIONS.length;
     setWaterGoalLiters(WATER_GOAL_OPTIONS[nextIndex]);
+  };
+
+  const openBudgetModal = () => {
+    setBudgetAmountText(profile ? String(profile.budget_amount) : '');
+    setBudgetPeriodDraft(profile?.budget_period ?? 'monthly');
+    setBudgetModalVisible(true);
+  };
+
+  const saveBudget = async () => {
+    const parsed = parseFloat(budgetAmountText.replace(',', '.'));
+    if (isNaN(parsed) || parsed <= 0) return;
+    setSavingBudget(true);
+    await updateProfile({ budget_amount: parsed, budget_period: budgetPeriod });
+    setSavingBudget(false);
+    setBudgetModalVisible(false);
   };
 
   return (
@@ -33,13 +63,13 @@ export default function ProfileScreen() {
           <Text style={[styles.email, { color: c.secondaryText }]}>Signed in as {session.user.email}</Text>
         )}
         <Text style={[styles.subtitle, { color: c.secondaryText }]}>
-          Goal, budget, diet and allergy settings, coming soon.
+          Goal, diet and allergy settings, coming soon.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: c.text }]}>Settings</Text>
         <View style={[styles.settingsCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
           <Pressable
-            onPress={(e) => toggleFrom(e.nativeEvent.pageX, e.nativeEvent.pageY)}
+            onPress={toggleTheme}
             style={styles.settingsRow}
             accessibilityRole="button"
             accessibilityLabel={scheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
@@ -81,6 +111,19 @@ export default function ProfileScreen() {
 
           <View style={[styles.settingsDivider, { backgroundColor: c.cardDivider }]} lightColor="transparent" darkColor="transparent" />
 
+          <Pressable onPress={openBudgetModal} style={styles.settingsRow} accessibilityRole="button" accessibilityLabel="Change grocery budget">
+            <RNView style={[styles.settingsIconWrap, { backgroundColor: c.cardDivider }]}>
+              <FontAwesome name="money" size={15} color={c.text} />
+            </RNView>
+            <Text style={[styles.settingsLabel, { color: c.text }]}>Grocery budget</Text>
+            <Text style={[styles.settingsValue, { color: c.secondaryText }]}>
+              {profile ? `${profile.budget_amount.toFixed(0)} EUR / ${profile.budget_period}` : '...'}
+            </Text>
+            <FontAwesome name="chevron-right" size={13} color={c.secondaryText} />
+          </Pressable>
+
+          <View style={[styles.settingsDivider, { backgroundColor: c.cardDivider }]} lightColor="transparent" darkColor="transparent" />
+
           <View style={styles.settingsRow} lightColor="transparent" darkColor="transparent">
             <RNView style={[styles.settingsIconWrap, { backgroundColor: c.cardDivider }]}>
               <FontAwesome name="bell-o" size={15} color={c.text} />
@@ -99,6 +142,39 @@ export default function ProfileScreen() {
           <Text style={[styles.signOutText, { color: c.ringProtein }]}>Sign out</Text>
         </Pressable>
       </ScrollView>
+
+      <Modal visible={budgetModalVisible} transparent animationType="fade" onRequestClose={() => setBudgetModalVisible(false)}>
+        <Pressable style={[styles.modalBackdrop, { backgroundColor: 'rgba(0,0,0,0.4)' }]} onPress={() => setBudgetModalVisible(false)} />
+        <View style={styles.modalWrap} lightColor="transparent" darkColor="transparent">
+          <View style={[styles.modalCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
+            <Text style={[styles.modalTitle, { color: c.text }]}>Grocery budget</Text>
+            <Text style={[styles.modalSubtitle, { color: c.secondaryText }]}>
+              How much do you want to spend on groceries, and how often?
+            </Text>
+            <AuthTextInput
+              placeholder="e.g. 150"
+              keyboardType="decimal-pad"
+              value={budgetAmountText}
+              onChangeText={setBudgetAmountText}
+            />
+            <View style={{ marginTop: 14 }} lightColor="transparent" darkColor="transparent">
+              <ChipSelect options={PERIOD_OPTIONS} selected={[budgetPeriod]} onToggle={(v) => setBudgetPeriodDraft(v as BudgetPeriod)} />
+            </View>
+            <View style={styles.modalButtonRow} lightColor="transparent" darkColor="transparent">
+              <Pressable onPress={() => setBudgetModalVisible(false)} style={[styles.modalCancelButton, { backgroundColor: c.cardDivider }]}>
+                <Text style={[styles.modalCancelText, { color: c.text }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={saveBudget}
+                disabled={savingBudget}
+                style={[styles.modalSaveButton, { backgroundColor: c.text, opacity: savingBudget ? 0.5 : 1 }]}
+              >
+                <Text style={[styles.modalSaveText, { color: c.background }]}>Save</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Animated.View>
   );
 }
@@ -119,4 +195,15 @@ const styles = StyleSheet.create({
 
   signOutButton: { borderRadius: 14, paddingHorizontal: 24, paddingVertical: 14, marginTop: 32, alignItems: 'center' },
   signOutText: { fontSize: 14, fontWeight: '700' },
+
+  modalBackdrop: { ...StyleSheet.absoluteFillObject },
+  modalWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  modalCard: { width: '100%', borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 22 },
+  modalTitle: { fontSize: 18, fontWeight: '800', marginBottom: 6 },
+  modalSubtitle: { fontSize: 13, fontWeight: '600', marginBottom: 16, lineHeight: 18 },
+  modalButtonRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  modalCancelButton: { flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
+  modalCancelText: { fontSize: 14, fontWeight: '700' },
+  modalSaveButton: { flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
+  modalSaveText: { fontSize: 14, fontWeight: '700' },
 });

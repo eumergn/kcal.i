@@ -27,7 +27,13 @@ export const initialGroceryItems: GroceryItem[] = [
   { id: 'pasta', name: 'Whole wheat pasta', neededGrams: 5250, pricePer100: 0.15, purchasedGrams: 0 },
 ];
 
-export const monthlyBudget = 300; // targets.budget (10/day) × 30
+/** Normalizes whatever period the user set their budget in during onboarding
+ * (daily/weekly/monthly) to a single monthly figure for display and progress math. */
+export function normalizeToMonthly(amount: number, period: 'daily' | 'weekly' | 'monthly'): number {
+  if (period === 'daily') return amount * 30;
+  if (period === 'weekly') return amount * (52 / 12);
+  return amount;
+}
 
 export function formatGrams(grams: number): string {
   return grams >= 1000 ? `${(grams / 1000).toFixed(2)} kg` : `${Math.round(grams)} g`;

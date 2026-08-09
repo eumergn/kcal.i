@@ -1,57 +1,43 @@
 import { createContext, ReactNode, useContext, useRef, useState } from 'react';
-import { Animated, Dimensions, StyleSheet } from 'react-native';
+import { Animated, Easing, StyleSheet } from 'react-native';
 
 import Colors from '@/constants/Colors';
 
 type Scheme = 'light' | 'dark';
-type ThemeContextValue = { scheme: Scheme; toggle: () => void; toggleFrom: (x: number, y: number) => void };
+type ThemeContextValue = { scheme: Scheme; toggle: () => void };
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 /** App-controlled theme, not system-driven - defaults to light, switchable from Profile > Settings. */
 export function AppThemeProvider({ children }: { children: ReactNode }) {
   const [scheme, setScheme] = useState<Scheme>('light');
-  const [reveal, setReveal] = useState<{ x: number; y: number; radius: number; color: string } | null>(null);
-  const scale = useRef(new Animated.Value(0)).current;
+  const [fadeColor, setFadeColor] = useState<string | null>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const toggle = () => setScheme((s) => (s === 'dark' ? 'light' : 'dark'));
-
-  // Circular reveal: a solid disc of the *next* theme's background grows from the
-  // tapped icon until it covers the screen, then the real theme swap happens
-  // underneath and the disc disappears - the swap itself is imperceptible since the
-  // disc already matches the new background exactly.
-  const toggleFrom = (x: number, y: number) => {
+  // A plain full-screen cross-fade instead of a tap-position reveal - the toggle now
+  // lives in a Settings row, not a header icon, so an effect anchored to "where you
+  // tapped" no longer makes sense. The old theme's background fades out over the new
+  // one, which is swapped in immediately underneath.
+  const toggle = () => {
     const next: Scheme = scheme === 'dark' ? 'light' : 'dark';
-    const { width, height } = Dimensions.get('window');
-    const radius = Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
-    setReveal({ x, y, radius, color: Colors[next].background });
-    scale.setValue(0);
-    Animated.timing(scale, { toValue: 1, duration: 480, useNativeDriver: true }).start(() => {
-      setScheme(next);
-      setReveal(null);
-    });
+    setFadeColor(Colors[scheme].background);
+    setScheme(next);
+    fadeAnim.setValue(1);
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 350,
+      easing: Easing.inOut(Easing.ease),
+      useNativeDriver: true,
+    }).start(() => setFadeColor(null));
   };
 
-  const diameter = reveal ? reveal.radius * 2 : 0;
-
   return (
-    <ThemeContext.Provider value={{ scheme, toggle, toggleFrom }}>
+    <ThemeContext.Provider value={{ scheme, toggle }}>
       {children}
-      {reveal && (
+      {fadeColor && (
         <Animated.View
           pointerEvents="none"
-          style={[
-            styles.reveal,
-            {
-              left: reveal.x - reveal.radius,
-              top: reveal.y - reveal.radius,
-              width: diameter,
-              height: diameter,
-              borderRadius: reveal.radius,
-              backgroundColor: reveal.color,
-              transform: [{ scale }],
-            },
-          ]}
+          style={[StyleSheet.absoluteFillObject, styles.fade, { backgroundColor: fadeColor, opacity: fadeAnim }]}
         />
       )}
     </ThemeContext.Provider>
@@ -59,7 +45,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  reveal: { position: 'absolute', zIndex: 9999, elevation: 9999 },
+  fade: { zIndex: 9999, elevation: 9999 },
 });
 
 export function useAppTheme(): ThemeContextValue {
