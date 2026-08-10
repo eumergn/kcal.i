@@ -46,19 +46,6 @@ export function IntroMusicProvider({ children }: { children: ReactNode }) {
   const releasedRef = useRef(false);
   const startedRef = useRef(false);
 
-  // The player loads the asset asynchronously - setting volume/loop before isLoaded
-  // flips true is a real race (the native side hadn't finished initializing yet,
-  // silently discarding the assignment and defaulting to full volume), which is
-  // exactly why volume control looked like it wasn't doing anything. Waiting for the
-  // real status update instead of firing everything on mount fixes that.
-  useEffect(() => {
-    if (!status.isLoaded || startedRef.current) return;
-    startedRef.current = true;
-    player.loop = true;
-    player.volume = VOLUME_START;
-    player.play();
-  }, [status.isLoaded, player]);
-
   useEffect(() => {
     return () => {
       releasedRef.current = true;
@@ -92,6 +79,23 @@ export function IntroMusicProvider({ children }: { children: ReactNode }) {
       }
     }, stepMs);
   };
+
+  // Starts silent and fades in, rather than setting volume then immediately calling
+  // play() - the player loads the asset asynchronously, and setting volume right
+  // before play() isn't guaranteed to land on the native side before playback
+  // actually starts producing sound, which is exactly why the start of playback
+  // could still be heard at full volume regardless of what volume was assigned.
+  // Starting at 0 and ramping up removes that race entirely: whatever the native
+  // side's true starting volume is, it's inaudible before the ramp takes over.
+  useEffect(() => {
+    if (!status.isLoaded || startedRef.current) return;
+    startedRef.current = true;
+    player.loop = true;
+    player.volume = 0;
+    player.play();
+    duck(0, VOLUME_START, 350);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status.isLoaded, player]);
 
   const toggleMute = () => {
     if (releasedRef.current) return;
