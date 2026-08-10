@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
-import { useAudioPlayer } from 'expo-audio';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
 import { useAuth } from '@/context/AuthContext';
 
@@ -38,21 +38,32 @@ const IntroMusicContext = createContext<IntroMusicContextValue | undefined>(unde
  */
 export function IntroMusicProvider({ children }: { children: ReactNode }) {
   const player = useAudioPlayer(introMusic);
+  const status = useAudioPlayerStatus(player);
   const { session } = useAuth();
   const [showWidget, setShowWidget] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const rampInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const releasedRef = useRef(false);
+  const startedRef = useRef(false);
 
+  // The player loads the asset asynchronously - setting volume/loop before isLoaded
+  // flips true is a real race (the native side hadn't finished initializing yet,
+  // silently discarding the assignment and defaulting to full volume), which is
+  // exactly why volume control looked like it wasn't doing anything. Waiting for the
+  // real status update instead of firing everything on mount fixes that.
   useEffect(() => {
+    if (!status.isLoaded || startedRef.current) return;
+    startedRef.current = true;
     player.loop = true;
     player.volume = VOLUME_START;
     player.play();
+  }, [status.isLoaded, player]);
+
+  useEffect(() => {
     return () => {
       releasedRef.current = true;
       if (rampInterval.current) clearInterval(rampInterval.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const duck = (from: number, to: number, durationMs: number) => {
