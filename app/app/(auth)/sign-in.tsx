@@ -75,7 +75,7 @@ export default function SignInScreen() {
             disabled={loading || !isSupabaseConfigured}
             style={[styles.primaryButton, { backgroundColor: c.ringCalories, opacity: loading || !isSupabaseConfigured ? 0.5 : 1 }]}
           >
-            {loading ? <ActivityIndicator color="#04110D" /> : <Text style={styles.primaryButtonText}>Sign In</Text>}
+            {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Sign In</Text>}
           </Pressable>
 
           <Link href="/forgot-password" asChild>
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 13, fontWeight: '600' },
 
   primaryButton: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
-  primaryButtonText: { fontSize: 15, fontWeight: '700', color: '#04110D' },
+  primaryButtonText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
 
   linkButton: { alignItems: 'center', paddingVertical: 10 },
   linkText: { fontSize: 13, fontWeight: '600' },

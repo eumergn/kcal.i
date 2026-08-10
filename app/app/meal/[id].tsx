@@ -137,7 +137,7 @@ export default function MealDetailScreen() {
           onPress={() => toggleEaten(meal.id)}
           style={[styles.eatenButton, { backgroundColor: meal.eaten ? c.cardDivider : c.ringCalories }]}
         >
-          <Text style={[styles.eatenButtonText, { color: meal.eaten ? c.text : '#04110D' }]}>
+          <Text style={[styles.eatenButtonText, { color: meal.eaten ? c.text : '#FFFFFF' }]}>
             {meal.eaten ? 'Unmark as eaten' : 'Mark as eaten'}
           </Text>
         </Pressable>

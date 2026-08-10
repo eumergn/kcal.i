@@ -34,9 +34,9 @@ export function ChipSelect({
               },
             ]}
           >
-            <Text style={[styles.label, { color: isSelected ? '#04110D' : c.text }]}>{opt.label}</Text>
+            <Text style={[styles.label, { color: isSelected ? '#FFFFFF' : c.text }]}>{opt.label}</Text>
             {opt.description && (
-              <Text style={[styles.description, { color: isSelected ? '#04110D' : c.secondaryText }]}>
+              <Text style={[styles.description, { color: isSelected ? '#FFFFFF' : c.secondaryText }]}>
                 {opt.description}
               </Text>
             )}

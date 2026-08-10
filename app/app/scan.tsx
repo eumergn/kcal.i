@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   addedText: { fontSize: 13, fontWeight: '600', marginBottom: 4 },
 
   primaryButton: { borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
-  primaryButtonText: { fontSize: 15, fontWeight: '700', color: '#04110D' },
+  primaryButtonText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
   secondaryButton: { paddingVertical: 12, alignItems: 'center' },
   secondaryButtonText: { fontSize: 13, fontWeight: '600' },
 });

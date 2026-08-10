@@ -116,7 +116,7 @@ export default function SignUpScreen() {
             disabled={loading || !isSupabaseConfigured}
             style={[styles.primaryButton, { backgroundColor: c.ringCalories, opacity: loading || !isSupabaseConfigured ? 0.5 : 1 }]}
           >
-            {loading ? <ActivityIndicator color="#04110D" /> : <Text style={styles.primaryButtonText}>Create Account</Text>}
+            {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Create Account</Text>}
           </Pressable>
         </View>
 
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 13, fontWeight: '600' },
 
   primaryButton: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
-  primaryButtonText: { fontSize: 15, fontWeight: '700', color: '#04110D' },
+  primaryButtonText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
 
   footer: { alignItems: 'center', marginTop: 32 },
   footerText: { fontSize: 14, fontWeight: '600' },
