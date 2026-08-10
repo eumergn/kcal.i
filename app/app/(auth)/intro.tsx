@@ -11,14 +11,16 @@ const introVideo = require('@/assets/videos/intro.mp4');
  * sign-in automatically when it finishes, or immediately on tap so nobody's stuck
  * waiting on it.
  *
- * The video is pre-padded (via ffmpeg, see project notes) to a tall portrait canvas
- * with its own black-to-white background baked directly into the frames, timed to
- * the source's real transition. That's deliberate, not incidental: VideoView paints
- * an opaque background within its own bounds regardless of contentFit, so a
- * wrapping view's background color can never show through in the letterboxed
- * margins - baking the color into the video itself is the only way to actually
- * match it. With the padding already close to typical phone aspect ratios,
- * contentFit="cover" now needs little to no real cropping.
+ * The video is pre-padded (via ffmpeg + a frame-by-frame OpenCV pass, see project
+ * notes) to a tall portrait canvas with the source's own black-to-white circle-reveal
+ * transition extended directly into the new frames - the real reveal is a growing
+ * circle centered on the logo, not a flat fade, so the padding continues that same
+ * circle (same center, frame-accurate radius for every frame that exists in the
+ * original, then a smooth continuation to cover the taller canvas) rather than a
+ * separately-timed color swap. That's necessary, not just nicer: VideoView paints an
+ * opaque background within its own bounds regardless of contentFit, so a wrapping
+ * view's background color can never show through in the letterboxed margins - baking
+ * the real transition into the video itself is the only way to actually match it.
  */
 export default function IntroScreen() {
   const player = useVideoPlayer(introVideo, (p) => {
