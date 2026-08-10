@@ -14,6 +14,8 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ProfileProvider, useProfile } from '@/context/ProfileContext';
 import { WeightProvider } from '@/context/WeightContext';
 import { SettingsProvider } from '@/context/SettingsContext';
+import { IntroMusicProvider, useIntroMusic } from '@/context/IntroMusicContext';
+import { SoundWidget } from '@/components/SoundWidget';
 import { Text, View } from '@/components/Themed';
 
 export {
@@ -54,13 +56,15 @@ export default function RootLayout() {
     <AppThemeProvider>
       <AuthProvider>
         <ProfileProvider>
-          <PlanProvider>
-            <WeightProvider>
-              <SettingsProvider>
-                <RootLayoutNav />
-              </SettingsProvider>
-            </WeightProvider>
-          </PlanProvider>
+          <IntroMusicProvider>
+            <PlanProvider>
+              <WeightProvider>
+                <SettingsProvider>
+                  <RootLayoutNav />
+                </SettingsProvider>
+              </WeightProvider>
+            </PlanProvider>
+          </IntroMusicProvider>
         </ProfileProvider>
       </AuthProvider>
     </AppThemeProvider>
@@ -71,6 +75,7 @@ function RootLayoutNav() {
   const { scheme } = useAppTheme();
   const { session, loading } = useAuth();
   const { status: profileStatus } = useProfile();
+  const { showWidget, songTitle } = useIntroMusic();
   const c = Colors[scheme];
 
   const navigationTheme = {
@@ -129,6 +134,7 @@ function RootLayoutNav() {
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         </Stack.Protected>
       </Stack>
+      {showWidget && <SoundWidget title={songTitle} />}
     </ThemeProvider>
   );
 }

@@ -2,11 +2,12 @@ import { createContext, ReactNode, useContext, useEffect, useRef, useState } fro
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
 import { useAuth } from '@/context/AuthContext';
+import { useProfile } from '@/context/ProfileContext';
 
 const introMusic = require('@/assets/audio/intro-music.mp3');
 
-export const VOLUME_START = 0.008;
-export const VOLUME_DUCKED = 0.004;
+export const VOLUME_START = 0.1;
+export const VOLUME_DUCKED = 0.05;
 const START_DELAY_MS = 8000;
 const FADE_OUT_MS = 1800;
 const SONG_TITLE = 'Whispers of Rain - djovan';
@@ -22,12 +23,14 @@ type IntroMusicContextValue = {
 
 const IntroMusicContext = createContext<IntroMusicContextValue | undefined>(undefined);
 
-/** One AudioPlayer for the whole (auth) flow, not per-screen - survives the
- * intro -> sign-in handoff and stops only once `session` goes signed-in. */
+/** One AudioPlayer for the whole app-shell, not per-screen - survives intro, sign-in
+ * and onboarding, stopping only once the user has a real session AND a completed
+ * profile (i.e. actually in the main app, not mid-onboarding). */
 export function IntroMusicProvider({ children }: { children: ReactNode }) {
   const player = useAudioPlayer(introMusic);
   const status = useAudioPlayerStatus(player);
   const { session } = useAuth();
+  const { status: profileStatus } = useProfile();
   const [showWidget, setShowWidget] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const rampInterval = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -113,7 +116,7 @@ export function IntroMusicProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || profileStatus !== 'present') return;
     duck(VOLUME_DUCKED, 0, FADE_OUT_MS);
     const stopTimer = setTimeout(() => {
       setShowWidget(false);
@@ -126,7 +129,7 @@ export function IntroMusicProvider({ children }: { children: ReactNode }) {
     }, FADE_OUT_MS + 100);
     return () => clearTimeout(stopTimer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
+  }, [session, profileStatus]);
 
   return (
     <IntroMusicContext.Provider value={{ duck, showWidget, setShowWidget, songTitle: SONG_TITLE, isMuted, toggleMute }}>

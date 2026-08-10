@@ -14,6 +14,7 @@ import { Logo } from '@/components/Logo';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useProfile, ActivityLevel, BudgetPeriod, DietType, Goal, Sex } from '@/context/ProfileContext';
+import { useAuth } from '@/context/AuthContext';
 import { useWeight } from '@/context/WeightContext';
 import { useSettings } from '@/context/SettingsContext';
 import { computeTargets } from '@/lib/nutrition';
@@ -160,6 +161,7 @@ export default function OnboardingScreen() {
   const c = Colors[scheme];
   const insets = useSafeAreaInsets();
   const { createProfile } = useProfile();
+  const { signOut } = useAuth();
   const { seedFromOnboarding } = useWeight();
   const { setWaterGoalLiters } = useSettings();
 
@@ -232,18 +234,24 @@ export default function OnboardingScreen() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 24 }]}
       >
         {step > 0 && (
-          <>
-            <RNView style={styles.headerRow}>
-              <Pressable onPress={() => goToStep(step - 1)} hitSlop={14} accessibilityLabel="Back">
-                <FontAwesome name="chevron-left" size={16} color={c.text} />
-              </Pressable>
-              <RNView style={styles.progressRow}>
-                {Array.from({ length: TOTAL_DATA_STEPS }).map((_, i) => (
-                  <RNView key={i} style={[styles.progressDot, { backgroundColor: i < progressFilled ? c.text : c.cardDivider }]} />
-                ))}
-              </RNView>
+          <RNView style={styles.headerRow}>
+            <Pressable onPress={() => goToStep(step - 1)} hitSlop={14} accessibilityLabel="Back">
+              <FontAwesome name="chevron-left" size={16} color={c.text} />
+            </Pressable>
+            <RNView style={styles.progressRow}>
+              {Array.from({ length: TOTAL_DATA_STEPS }).map((_, i) => (
+                <RNView key={i} style={[styles.progressDot, { backgroundColor: i < progressFilled ? c.text : c.cardDivider }]} />
+              ))}
             </RNView>
-          </>
+          </RNView>
+        )}
+
+        {step === 0 && (
+          <RNView style={styles.headerRow}>
+            <Pressable onPress={signOut} hitSlop={14} accessibilityLabel="Back to sign in">
+              <FontAwesome name="chevron-left" size={16} color={c.text} />
+            </Pressable>
+          </RNView>
         )}
 
         {step === 0 && (
