@@ -82,7 +82,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="scan"
+        name="scan-tab"
         options={{
           title: '',
           tabBarButton: () => <ScanTabButton onPress={() => router.push('/scan')} />,
