@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, View as RNView } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, View as RNView } from 'react-native';
+import { router } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 import { Text, View } from '@/components/Themed';
@@ -26,7 +27,8 @@ type PopoverKind = 'water' | 'budget' | null;
 export default function ProfileScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
-  const { session, signOut } = useAuth();
+  const { session, signOut, deleteAccount } = useAuth();
+  const [deleting, setDeleting] = useState(false);
   const { scheme: appScheme, toggle: toggleTheme } = useAppTheme();
   const { units, waterGoalLiters, notificationsEnabled, setUnits, setWaterGoalLiters, setNotificationsEnabled } = useSettings();
   const { profile, updateProfile } = useProfile();
@@ -70,6 +72,35 @@ export default function ProfileScreen() {
     await updateProfile({ budget_amount: parsed, budget_period: budgetPeriod });
     setSavingBudget(false);
     setOpenPopover(null);
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'Delete your account?',
+      'This permanently deletes your profile, meal history, weight log and everything else tied to your account. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete account',
+          style: 'destructive',
+          onPress: () => {
+            // Second confirmation - a mis-tap on an irreversible, full-data-loss action
+            // deserves more friction than the usual one-shot destructive Alert.
+            Alert.alert('Are you absolutely sure?', 'There is no way to recover your data after this.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Yes, delete everything', style: 'destructive', onPress: runDeleteAccount },
+            ]);
+          },
+        },
+      ],
+    );
+  };
+
+  const runDeleteAccount = async () => {
+    setDeleting(true);
+    const { error } = await deleteAccount();
+    setDeleting(false);
+    if (error) Alert.alert('Could not delete account', error);
   };
 
   return (
@@ -159,8 +190,39 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        <Text style={[styles.sectionTitle, { color: c.text }]}>Legal</Text>
+        <View style={[styles.settingsCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
+          <Pressable onPress={() => router.push('/privacy-policy')} style={styles.settingsRow} accessibilityRole="button" accessibilityLabel="View privacy policy">
+            <RNView style={[styles.settingsIconWrap, { backgroundColor: c.cardDivider }]}>
+              <FontAwesome name="shield" size={14} color={c.text} />
+            </RNView>
+            <Text style={[styles.settingsLabel, { color: c.text }]}>Privacy policy</Text>
+            <FontAwesome name="chevron-right" size={13} color={c.secondaryText} />
+          </Pressable>
+
+          <View style={[styles.settingsDivider, { backgroundColor: c.cardDivider }]} lightColor="transparent" darkColor="transparent" />
+
+          <Pressable onPress={() => router.push('/terms')} style={styles.settingsRow} accessibilityRole="button" accessibilityLabel="View terms and conditions">
+            <RNView style={[styles.settingsIconWrap, { backgroundColor: c.cardDivider }]}>
+              <FontAwesome name="file-text-o" size={14} color={c.text} />
+            </RNView>
+            <Text style={[styles.settingsLabel, { color: c.text }]}>Terms and conditions</Text>
+            <FontAwesome name="chevron-right" size={13} color={c.secondaryText} />
+          </Pressable>
+        </View>
+
         <Pressable onPress={signOut} style={[styles.signOutButton, { backgroundColor: c.cardDivider }]}>
           <Text style={[styles.signOutText, { color: c.ringProtein }]}>Sign out</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={confirmDeleteAccount}
+          disabled={deleting}
+          style={[styles.deleteButton, { borderColor: c.ringCalories, opacity: deleting ? 0.5 : 1 }]}
+        >
+          <Text style={[styles.deleteButtonText, { color: c.ringCalories }]}>
+            {deleting ? 'Deleting...' : 'Delete account'}
+          </Text>
         </Pressable>
       </ScrollView>
 
@@ -233,6 +295,8 @@ const styles = StyleSheet.create({
 
   signOutButton: { borderRadius: 14, paddingHorizontal: 24, paddingVertical: 14, marginTop: 32, alignItems: 'center' },
   signOutText: { fontSize: 14, fontWeight: '700' },
+  deleteButton: { borderRadius: 14, paddingHorizontal: 24, paddingVertical: 14, marginTop: 12, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth },
+  deleteButtonText: { fontSize: 14, fontWeight: '700' },
 
   popover: {
     position: 'absolute', left: 20, right: 20, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 20,

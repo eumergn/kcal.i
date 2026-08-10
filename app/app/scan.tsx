@@ -45,6 +45,10 @@ export default function ScanScreen() {
   const c = Colors[scheme];
   const { addFoodToCatalog } = usePlan();
   const [permission, requestPermission] = useCameraPermissions();
+  // Only the loading/error cards sit over the live camera feed (the product-found
+  // card unmounts the camera, so it stays fully opaque) - translucent so the feed
+  // stays visible underneath instead of being fully blocked by a solid c.card fill.
+  const overlayCardColor = scheme === 'dark' ? 'rgba(0,0,0,0.78)' : 'rgba(255,255,255,0.85)';
 
   // Ask immediately on entering this screen instead of waiting for a tap - the
   // native OS dialog only appears once requestPermission() is actually called, so
@@ -147,14 +151,14 @@ export default function ScanScreen() {
       )}
 
       {loading && (
-        <View style={[styles.center, styles.resultCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
+        <View style={[styles.center, styles.resultCard, { backgroundColor: overlayCardColor, borderColor: c.cardDivider }]}>
           <ActivityIndicator color={c.ringCalories} />
           <Text style={[styles.loadingText, { color: c.secondaryText }]}>Looking up product...</Text>
         </View>
       )}
 
       {error && !loading && (
-        <View style={[styles.resultCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
+        <View style={[styles.resultCard, { backgroundColor: overlayCardColor, borderColor: c.cardDivider }]}>
           <Text style={[styles.errorText, { color: c.text }]}>{error}</Text>
           <Pressable onPress={scanAnother} style={[styles.primaryButton, { backgroundColor: c.ringCalories }]}>
             <Text style={styles.primaryButtonText}>Try again</Text>

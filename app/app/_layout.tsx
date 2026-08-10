@@ -119,6 +119,8 @@ function RootLayoutNav() {
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
           <Stack.Screen name="meal/[id]" options={{ presentation: 'modal', headerShown: true }} />
           <Stack.Screen name="scan" options={{ presentation: 'modal', headerShown: true, title: 'Scan a product' }} />
+          <Stack.Screen name="privacy-policy" options={{ headerShown: true }} />
+          <Stack.Screen name="terms" options={{ headerShown: true }} />
         </Stack.Protected>
         <Stack.Protected guard={hasAccount && !hasProfile}>
           <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
