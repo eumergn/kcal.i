@@ -11,7 +11,12 @@ import SignInScreen from './sign-in';
 
 const introVideo = require('@/assets/videos/intro.mp4');
 
-const CROSSFADE_MS = 220;
+// Slower than a typical crossfade on purpose - the video's baked-in wordmark reads
+// visibly bolder than the real Logo component it hands off to (video pixels vs. a
+// vector Text render are never going to be pixel-identical in weight), so a quick
+// swap reads as a jump. Stretching the fade out gives the eye time to settle into
+// the real logo before any movement starts, instead of a sudden weight change.
+const CROSSFADE_MS = 600;
 const HOLD_MS = 150; // a brief beat between the crossfade settling and the glide starting, so the moment reads as deliberate rather than instant
 const GLIDE_MS = 480;
 const VOLUME_RAMP_MS = CROSSFADE_MS + HOLD_MS + GLIDE_MS; // ducks out across the same span as the visual transition, not a separate timer

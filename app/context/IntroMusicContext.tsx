@@ -5,8 +5,8 @@ import { useAuth } from '@/context/AuthContext';
 
 const introMusic = require('@/assets/audio/intro-music.mp3');
 
-export const VOLUME_START = 0.25;
-export const VOLUME_DUCKED = 0.12;
+export const VOLUME_START = 0.04;
+export const VOLUME_DUCKED = 0.02;
 const FADE_OUT_MS = 1800; // "end it slowly" once the user actually signs in
 const UNMUTE_FADE_IN_MS = 900;
 const SONG_TITLE = 'Apalonbeats';
