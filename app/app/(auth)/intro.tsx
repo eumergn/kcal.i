@@ -6,6 +6,7 @@ import { useEventListener } from 'expo';
 
 import { Logo } from '@/components/Logo';
 import { getSignInLogoCenterY } from '@/lib/introTransition';
+import SignInScreen from './sign-in';
 
 const introVideo = require('@/assets/videos/intro.mp4');
 
@@ -31,9 +32,18 @@ const GLIDE_MS = 480;
  * sign-in with the default slide-from-right - this crossfades the video's final
  * frame into the real Logo component (already centered, matching what the video's
  * last frame shows), then glides that logo up to sign-in's actual measured logo
- * position (see lib/introTransition.ts) before navigating. Sign-in's own entrance
- * animation is set to 'none' so the handoff lands exactly where the glide ends,
- * instead of the whole screen sliding in on top of it.
+ * position before navigating. Sign-in's own entrance animation is set to 'none' so
+ * the handoff lands exactly where the glide ends, instead of the whole screen
+ * sliding in on top of it.
+ *
+ * The target position isn't a guessed percentage of screen height - a real,
+ * invisible instance of SignInScreen is mounted below (opacity 0, not display:none,
+ * so it still lays out) the moment this screen appears, and reports its own logo's
+ * real measured position via lib/introTransition.ts. That self-measurement uses the
+ * actual device's real dimensions, safe-area insets and font metrics, and re-runs on
+ * every single launch - not a cached value from a previous mount - so it's accurate
+ * on any phone, not just the one this was built and tested on. The video runs ~10s,
+ * which is ample time for that layout pass to complete well before the glide needs it.
  */
 export default function IntroScreen() {
   const player = useVideoPlayer(introVideo, (p) => {
@@ -75,6 +85,10 @@ export default function IntroScreen() {
 
   return (
     <Pressable style={styles.container} onPress={runTransition}>
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { opacity: 0 }]}>
+        <SignInScreen />
+      </Animated.View>
+
       <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: videoOpacity }]}>
         <VideoView
           player={player}
