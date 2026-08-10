@@ -1,11 +1,17 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEventListener } from 'expo';
 
-import { View } from '@/components/Themed';
-
 const introVideo = require('@/assets/videos/intro.mp4');
+
+// The video itself cuts from a black background to a white one at this timestamp -
+// matched here so the screen's own background (visible in the "contain" letterbox
+// bars around the video) switches in sync instead of staying a fixed color that
+// clashes with whichever half of the video is currently showing.
+const BG_SWITCH_MS = 7250;
+const BG_TRANSITION_MS = 250;
 
 /**
  * Plays once, full-screen, before the sign-in/sign-up welcome screen - the first
@@ -23,9 +29,19 @@ export default function IntroScreen() {
 
   useEventListener(player, 'playToEnd', goToSignIn);
 
+  const bgAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      Animated.timing(bgAnim, { toValue: 1, duration: BG_TRANSITION_MS, easing: Easing.linear, useNativeDriver: false }).start();
+    }, BG_SWITCH_MS);
+    return () => clearTimeout(timer);
+  }, [bgAnim]);
+
+  const backgroundColor = bgAnim.interpolate({ inputRange: [0, 1], outputRange: ['#000000', '#FFFFFF'] });
+
   return (
     <Pressable style={styles.container} onPress={goToSignIn}>
-      <View style={StyleSheet.absoluteFillObject}>
+      <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor }]}>
         <VideoView
           player={player}
           style={StyleSheet.absoluteFillObject}
@@ -34,14 +50,11 @@ export default function IntroScreen() {
           allowsFullscreen={false}
           allowsPictureInPicture={false}
         />
-      </View>
+      </Animated.View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  // White, not black - the video's own background is white, so with contentFit
-  // "contain" (nothing cropped, unlike "cover" which zoomed in hard on a 16:9 video
-  // filling a much taller portrait screen) the letterbox bars blend in seamlessly.
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: '#000000' },
 });
