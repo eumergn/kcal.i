@@ -236,7 +236,7 @@ export default function OnboardingScreen() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
-        style={{ backgroundColor: c.background }}
+        style={{ flex: 1, backgroundColor: c.background }}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 24 }]}
       >
         {step > 0 && (
@@ -507,8 +507,10 @@ export default function OnboardingScreen() {
           </>
         )}
 
-        {error && <Text style={[styles.errorText, { color: c.ringCalories }]}>{error}</Text>}
+      </ScrollView>
 
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 64, backgroundColor: c.background }]} lightColor="transparent" darkColor="transparent">
+        {error && <Text style={[styles.errorText, { color: c.ringCalories }]}>{error}</Text>}
         <View style={styles.navRow} lightColor="transparent" darkColor="transparent">
           <Pressable
             onPress={handleNext}
@@ -524,13 +526,14 @@ export default function OnboardingScreen() {
             )}
           </Pressable>
         </View>
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 24, paddingBottom: 120, flexGrow: 1 }, // extra clearance so the sound widget doesn't collide with the nav button
+  content: { padding: 24, paddingBottom: 24, flexGrow: 1 },
+  footer: { paddingHorizontal: 24, paddingTop: 12 },
 
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 28 },
   progressRow: { flex: 1, flexDirection: 'row', gap: 6 },
@@ -569,7 +572,7 @@ const styles = StyleSheet.create({
   infoText: { fontSize: 12, fontWeight: '600', lineHeight: 17 },
 
   errorText: { fontSize: 13, fontWeight: '600', marginTop: 16 },
-  navRow: { marginTop: 32 },
+  navRow: { marginTop: 0 },
   primaryButton: { flexDirection: 'row', gap: 10, borderRadius: 14, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
   primaryButtonText: { fontSize: 15, fontWeight: '700' },
 });
