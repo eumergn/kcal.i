@@ -1,7 +1,11 @@
-import { createContext, ReactNode, useContext, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
 
 import { initialMeals, Meal } from '@/constants/planData';
-import { FoodCatalogEntry, foodCatalog as staticFoodCatalog } from '@/constants/foodCatalog';
+import { FoodCatalogEntry, buildFoodCatalog, foodCatalog as staticFoodCatalog } from '@/constants/foodCatalog';
+import { normalizeToMonthly } from '@/constants/groceryData';
+import { useProfile } from '@/context/ProfileContext';
+import { computeTargets } from '@/lib/nutrition';
+import { generateMealPlan, mealSlotsToMeals } from '@/lib/mealPlanner';
 
 type PlanContextValue = {
   meals: Meal[];
@@ -18,8 +22,35 @@ const PlanContext = createContext<PlanContextValue | undefined>(undefined);
 
 /** Shared across Home, the meal-detail modal, and the scan modal so edits/scans in one show up everywhere. */
 export function PlanProvider({ children }: { children: ReactNode }) {
+  const { profile } = useProfile();
   const [meals, setMeals] = useState<Meal[]>(initialMeals);
   const [catalog, setCatalog] = useState<FoodCatalogEntry[]>(staticFoodCatalog);
+
+  // Generates the real, personalized plan once the profile first loads - not on every
+  // subsequent profile edit, so a later Settings change doesn't silently blow away
+  // whatever the user has already toggled/edited/added in today's plan.
+  const generatedRef = useRef(false);
+  useEffect(() => {
+    if (!profile || generatedRef.current) return;
+    generatedRef.current = true;
+
+    setCatalog(buildFoodCatalog(profile.country));
+
+    const targets = computeTargets(profile);
+    const dailyBudget = normalizeToMonthly(profile.budget_amount, profile.budget_period) / 30;
+    const mealSlots = generateMealPlan(
+      {
+        country: profile.country,
+        dietType: profile.diet_type,
+        allergies: profile.allergies,
+        dislikedFoodIds: [],
+        mealsPerDay: 4,
+      },
+      targets,
+      dailyBudget,
+    );
+    setMeals(mealSlotsToMeals(mealSlots));
+  }, [profile]);
 
   const toggleEaten = (mealId: string) => {
     setMeals((prev) => prev.map((m) => (m.id === mealId ? { ...m, eaten: !m.eaten } : m)));
