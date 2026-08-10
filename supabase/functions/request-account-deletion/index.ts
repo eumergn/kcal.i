@@ -1,13 +1,13 @@
 // Supabase Edge Function (Deno runtime). Starts the account-deletion flow: generates
 // a one-time token, stores it with a 1-hour expiry, and emails the user a branded
-// confirmation link (via Resend). The account is NOT deleted here - only
+// confirmation link (via SendGrid). The account is NOT deleted here - only
 // confirm-account-deletion, triggered by clicking that link, actually deletes
 // anything. This two-step flow means a stolen/leaked session token alone can't
 // destroy the account instantly; the attacker would also need access to the user's
 // inbox.
 //
 // Required secrets (set via `supabase secrets set NAME=value`, never commit these):
-//   RESEND_API_KEY   - from resend.com, server-side only, never in app code
+//   SENDGRID_API_KEY   - from sendgrid.com, server-side only, never in app code
 // Already available automatically in every Edge Function:
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
@@ -15,7 +15,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { deletionConfirmationEmail } from '../_shared/emailTemplate.ts';
 
 const TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
-const RESEND_FROM = 'kcal.i <onboarding@resend.dev>'; // swap to a verified domain sender once one exists
+const SENDGRID_FROM = { email: 'kcal.i@outlook.com', name: 'kcal.i' };
 
 Deno.serve(async (req) => {
   try {
@@ -44,17 +44,17 @@ Deno.serve(async (req) => {
 
     const confirmUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/confirm-account-deletion?token=${token}`;
 
-    const resendKey = Deno.env.get('RESEND_API_KEY');
-    if (!resendKey) throw new Error('RESEND_API_KEY is not set');
+    const sendgridKey = Deno.env.get('SENDGRID_API_KEY');
+    if (!sendgridKey) throw new Error('SENDGRID_API_KEY is not set');
 
-    const emailRes = await fetch('https://api.resend.com/emails', {
+    const emailRes = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${resendKey}`, 'content-type': 'application/json' },
+      headers: { Authorization: `Bearer ${sendgridKey}`, 'content-type': 'application/json' },
       body: JSON.stringify({
-        from: RESEND_FROM,
-        to: user.email,
+        personalizations: [{ to: [{ email: user.email }] }],
+        from: SENDGRID_FROM,
         subject: 'Confirm deletion of your kcal.i account',
-        html: deletionConfirmationEmail(confirmUrl),
+        content: [{ type: 'text/html', value: deletionConfirmationEmail(confirmUrl) }],
       }),
     });
     if (!emailRes.ok) {
