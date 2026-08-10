@@ -376,7 +376,7 @@ export default function HomeScreen() {
                 },
               ]}
             />
-            <ProgressRing size={68} strokeWidth={5} progress={displayTotals.calories / targets.calories} color={c.ringCalories} track={c.ringTrack}>
+            <ProgressRing size={68} strokeWidth={4} progress={displayTotals.calories / targets.calories} color={c.ringCalories} track={c.ringTrack}>
               <FontAwesome5 name="fire" size={20} color={c.ringCalories} />
             </ProgressRing>
           </View>
@@ -384,7 +384,7 @@ export default function HomeScreen() {
 
         <View style={styles.secondaryRow} lightColor="transparent" darkColor="transparent">
           <View style={[styles.secondaryStat, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-            <ProgressRing size={64} strokeWidth={5} progress={displayTotals.proteinG / targets.proteinG} color={c.ringProtein} track={c.ringTrack}>
+            <ProgressRing size={64} strokeWidth={4} progress={displayTotals.proteinG / targets.proteinG} color={c.ringProtein} track={c.ringTrack}>
               <MaterialCommunityIcons name="food-drumstick" size={22} color={c.ringProtein} />
             </ProgressRing>
             <Text style={[styles.smallRingGrams, { color: c.text }]}>
@@ -393,7 +393,7 @@ export default function HomeScreen() {
             <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Protein taken</Text>
           </View>
           <View style={[styles.secondaryStat, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-            <ProgressRing size={64} strokeWidth={5} progress={displayTotals.carbsG / targets.carbsG} color={c.ringCarbs} track={c.ringTrack}>
+            <ProgressRing size={64} strokeWidth={4} progress={displayTotals.carbsG / targets.carbsG} color={c.ringCarbs} track={c.ringTrack}>
               <FontAwesome5 name="bread-slice" size={19} color={c.ringCarbs} />
             </ProgressRing>
             <Text style={[styles.smallRingGrams, { color: c.text }]}>
@@ -402,7 +402,7 @@ export default function HomeScreen() {
             <Text style={[styles.secondaryLabel, { color: c.secondaryText }]}>Carbs taken</Text>
           </View>
           <View style={[styles.secondaryStat, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-            <ProgressRing size={64} strokeWidth={5} progress={displayTotals.fatG / targets.fatG} color={c.ringFat} track={c.ringTrack}>
+            <ProgressRing size={64} strokeWidth={4} progress={displayTotals.fatG / targets.fatG} color={c.ringFat} track={c.ringTrack}>
               <FontAwesome5 name="tint" size={19} color={c.ringFat} />
             </ProgressRing>
             <Text style={[styles.smallRingGrams, { color: c.text }]}>
@@ -413,7 +413,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={[styles.waterCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
-          <ProgressRing size={48} strokeWidth={4} progress={litersToday / waterGoalLiters} color={c.ringCarbs} track={c.ringTrack}>
+          <ProgressRing size={48} strokeWidth={3} progress={litersToday / waterGoalLiters} color={c.ringCarbs} track={c.ringTrack}>
             <FontAwesome5 name="tint" size={16} color={c.ringCarbs} />
           </ProgressRing>
           <View style={{ flex: 1 }} lightColor="transparent" darkColor="transparent">
