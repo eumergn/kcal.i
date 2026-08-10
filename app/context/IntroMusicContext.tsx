@@ -5,10 +5,9 @@ import { useAuth } from '@/context/AuthContext';
 
 const introMusic = require('@/assets/audio/intro-music.mp3');
 
-export const VOLUME_START = 0.04;
-export const VOLUME_DUCKED = 0.02;
+export const VOLUME_START = 0.004;
+export const VOLUME_DUCKED = 0.002;
 const FADE_OUT_MS = 1800; // "end it slowly" once the user actually signs in
-const UNMUTE_FADE_IN_MS = 900;
 const SONG_TITLE = 'Apalonbeats';
 
 type IntroMusicContextValue = {
@@ -100,14 +99,17 @@ export function IntroMusicProvider({ children }: { children: ReactNode }) {
   const toggleMute = () => {
     if (releasedRef.current) return;
     if (isMuted) {
-      // Fades in slowly, per request - not an instant jump back to the ducked level.
+      // Instant, like a normal mute button - no fade back in.
+      if (rampInterval.current) {
+        clearInterval(rampInterval.current);
+        rampInterval.current = null;
+      }
       try {
-        player.volume = 0;
+        player.volume = VOLUME_DUCKED;
         player.play();
       } catch {
         return;
       }
-      duck(0, VOLUME_DUCKED, UNMUTE_FADE_IN_MS);
       setIsMuted(false);
     } else {
       // Pausing (not stopping/resetting) so un-muting resumes from the same spot,
