@@ -35,7 +35,8 @@
         {
           "cameraPermission": "This app uses the camera to scan product barcodes and look up their nutrition info."
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true

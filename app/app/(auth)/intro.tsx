@@ -1,17 +1,22 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Easing, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { useAudioPlayer } from 'expo-audio';
 import { useEventListener } from 'expo';
 
 import { Logo } from '@/components/Logo';
 import { getSignInLogoCenterY } from '@/lib/introTransition';
-import SignInScreen from './sign-in';
 
 const introVideo = require('@/assets/videos/intro.mp4');
+const introMusic = require('@/assets/audio/intro-music.mp3');
 
 const CROSSFADE_MS = 220;
+const HOLD_MS = 150; // a brief beat between the crossfade settling and the glide starting, so the moment reads as deliberate rather than instant
 const GLIDE_MS = 480;
+const VOLUME_RAMP_MS = CROSSFADE_MS + HOLD_MS + GLIDE_MS; // ducks out across the same span as the visual transition, not a separate timer
+const VOLUME_BEFORE = 0.75;
+const VOLUME_AFTER = 0.5;
 
 /**
  * Plays once, full-screen, before the sign-in/sign-up welcome screen - the first
@@ -27,23 +32,28 @@ const GLIDE_MS = 480;
  * opaque background within its own bounds regardless of contentFit, so a wrapping
  * view's background color can never show through in the letterboxed margins - baking
  * the real transition into the video itself is the only way to actually match it.
+ * The video's own audio track has been stripped entirely - see the music player below.
  *
  * At the end (or on tap-to-skip), instead of just navigating - which would cut to
- * sign-in with the default slide-from-right - this crossfades the video's final
- * frame into the real Logo component (already centered, matching what the video's
- * last frame shows), then glides that logo up to sign-in's actual measured logo
- * position before navigating. Sign-in's own entrance animation is set to 'none' so
- * the handoff lands exactly where the glide ends, instead of the whole screen
- * sliding in on top of it.
+ * sign-in with the default slide-from-right - this runs a three-phase handoff: the
+ * video's final frame crossfades into the real Logo component (already centered,
+ * matching what the video shows) while it settles in from a slight scale-up; a brief
+ * hold; then the logo glides up to sign-in's actual measured position. Sign-in's own
+ * entrance animation is set to 'none' so the handoff lands exactly where the glide
+ * ends, instead of the whole screen sliding in on top of it.
  *
- * The target position isn't a guessed percentage of screen height - a real,
- * invisible instance of SignInScreen is mounted below (opacity 0, not display:none,
- * so it still lays out) the moment this screen appears, and reports its own logo's
- * real measured position via lib/introTransition.ts. That self-measurement uses the
- * actual device's real dimensions, safe-area insets and font metrics, and re-runs on
- * every single launch - not a cached value from a previous mount - so it's accurate
- * on any phone, not just the one this was built and tested on. The video runs ~10s,
- * which is ample time for that layout pass to complete well before the glide needs it.
+ * The target position comes from sign-in.tsx's own onLayout report (see
+ * lib/introTransition.ts) whenever a real, on-screen instance of it has already
+ * measured itself this session - accurate to the real device, not a guess. An
+ * earlier version tried to get that measurement on every single launch (including
+ * the very first one) by mounting an invisible copy of SignInScreen here at
+ * opacity:0 - reverted, because opacity:0 doesn't reliably composite as fully
+ * transparent on every Android renderer, and it risked showing as a visible dark
+ * rectangle instead of just being an invisible measurement pass. The one gap this
+ * leaves is a fresh install's very first glide, before sign-in has ever mounted for
+ * real - that one case falls back to a tuned Dimensions-based estimate below; every
+ * glide after that (including the very next one, since sign-in mounts for real
+ * moments later) uses the real measured value.
  */
 export default function IntroScreen() {
   const player = useVideoPlayer(introVideo, (p) => {
@@ -51,15 +61,38 @@ export default function IntroScreen() {
     p.play();
   });
 
+  const music = useAudioPlayer(introMusic);
+  useEffect(() => {
+    music.volume = VOLUME_BEFORE;
+    music.play();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [transitioning, setTransitioning] = useState(false);
   const videoOpacity = useRef(new Animated.Value(1)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(1.08)).current;
   const logoTranslateY = useRef(new Animated.Value(0)).current;
+
+  const duckMusic = () => {
+    const steps = 24;
+    const stepMs = VOLUME_RAMP_MS / steps;
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      music.volume = VOLUME_BEFORE + (VOLUME_AFTER - VOLUME_BEFORE) * (i / steps);
+      if (i >= steps) {
+        clearInterval(interval);
+        music.pause();
+      }
+    }, stepMs);
+  };
 
   const runTransition = () => {
     if (transitioning) return;
     setTransitioning(true);
     player.pause();
+    duckMusic();
 
     const screenHeight = Dimensions.get('window').height;
     const targetCenterY = getSignInLogoCenterY() ?? screenHeight * 0.18;
@@ -69,7 +102,9 @@ export default function IntroScreen() {
       Animated.parallel([
         Animated.timing(logoOpacity, { toValue: 1, duration: CROSSFADE_MS, useNativeDriver: true }),
         Animated.timing(videoOpacity, { toValue: 0, duration: CROSSFADE_MS, useNativeDriver: true }),
+        Animated.timing(logoScale, { toValue: 1, duration: CROSSFADE_MS, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       ]),
+      Animated.delay(HOLD_MS),
       Animated.timing(logoTranslateY, {
         toValue: translateDistance,
         duration: GLIDE_MS,
@@ -85,10 +120,6 @@ export default function IntroScreen() {
 
   return (
     <Pressable style={styles.container} onPress={runTransition}>
-      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { opacity: 0 }]}>
-        <SignInScreen />
-      </Animated.View>
-
       <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: videoOpacity }]}>
         <VideoView
           player={player}
@@ -103,7 +134,10 @@ export default function IntroScreen() {
       {transitioning && (
         <Animated.View
           pointerEvents="none"
-          style={[styles.logoOverlay, { opacity: logoOpacity, transform: [{ translateY: logoTranslateY }] }]}
+          style={[
+            styles.logoOverlay,
+            { opacity: logoOpacity, transform: [{ translateY: logoTranslateY }, { scale: logoScale }] },
+          ]}
         >
           <Logo />
         </Animated.View>
