@@ -5,15 +5,13 @@ import { useAuth } from '@/context/AuthContext';
 
 const introMusic = require('@/assets/audio/intro-music.mp3');
 
-export const VOLUME_START = 0.004;
-export const VOLUME_DUCKED = 0.002;
-const FADE_OUT_MS = 1800; // "end it slowly" once the user actually signs in
-const SONG_TITLE = 'Apalonbeats';
+export const VOLUME_START = 0.008;
+export const VOLUME_DUCKED = 0.004;
+const START_DELAY_MS = 8000;
+const FADE_OUT_MS = 1800;
+const SONG_TITLE = 'Whispers of Rain - djovan';
 
 type IntroMusicContextValue = {
-  /** Ramps volume linearly over durationMs. Safe to call even after the native
-   * player has been released (e.g. a stray tick racing a navigation-triggered
-   * teardown) - silently stops instead of throwing. */
   duck: (from: number, to: number, durationMs: number) => void;
   showWidget: boolean;
   setShowWidget: (show: boolean) => void;
@@ -24,17 +22,8 @@ type IntroMusicContextValue = {
 
 const IntroMusicContext = createContext<IntroMusicContextValue | undefined>(undefined);
 
-/**
- * Owns a single AudioPlayer instance for the whole (auth) flow, not one per screen -
- * it needs to keep playing across the intro -> sign-in handoff and only stop once the
- * user actually authenticates, which intro.tsx alone has no way to know about (that's
- * an AuthContext concern). Started once here on mount (looping - a single ~78s pass
- * would otherwise just run out and go silent, which is what "stopped after a couple
- * seconds" from a short trimmed clip without loop was); ducked by intro.tsx when its
- * own visual transition runs; faded out and stopped here automatically the moment
- * `session` goes from signed-out to signed-in; mutable on demand via the widget's
- * on/off button.
- */
+/** One AudioPlayer for the whole (auth) flow, not per-screen - survives the
+ * intro -> sign-in handoff and stops only once `session` goes signed-in. */
 export function IntroMusicProvider({ children }: { children: ReactNode }) {
   const player = useAudioPlayer(introMusic);
   const status = useAudioPlayerStatus(player);
@@ -66,8 +55,7 @@ export function IntroMusicProvider({ children }: { children: ReactNode }) {
       try {
         player.volume = from + (to - from) * (i / steps);
       } catch {
-        // Native shared object already gone (e.g. player torn down mid-ramp) -
-        // nothing left to animate, just stop quietly instead of crashing.
+        // native object already released - stop quietly
         if (rampInterval.current) clearInterval(rampInterval.current);
         rampInterval.current = null;
         return;
@@ -79,27 +67,26 @@ export function IntroMusicProvider({ children }: { children: ReactNode }) {
     }, stepMs);
   };
 
-  // Starts silent and fades in, rather than setting volume then immediately calling
-  // play() - the player loads the asset asynchronously, and setting volume right
-  // before play() isn't guaranteed to land on the native side before playback
-  // actually starts producing sound, which is exactly why the start of playback
-  // could still be heard at full volume regardless of what volume was assigned.
-  // Starting at 0 and ramping up removes that race entirely: whatever the native
-  // side's true starting volume is, it's inaudible before the ramp takes over.
+  // Delayed start (matches the video's own pacing) + starts silent and fades in,
+  // since setting volume right before play() isn't guaranteed to land before audio
+  // actually starts.
   useEffect(() => {
     if (!status.isLoaded || startedRef.current) return;
     startedRef.current = true;
-    player.loop = true;
-    player.volume = 0;
-    player.play();
-    duck(0, VOLUME_START, 350);
+    const timer = setTimeout(() => {
+      if (releasedRef.current) return;
+      player.loop = true;
+      player.volume = 0;
+      player.play();
+      duck(0, VOLUME_START, 350);
+    }, START_DELAY_MS);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status.isLoaded, player]);
 
   const toggleMute = () => {
     if (releasedRef.current) return;
     if (isMuted) {
-      // Instant, like a normal mute button - no fade back in.
       if (rampInterval.current) {
         clearInterval(rampInterval.current);
         rampInterval.current = null;
@@ -112,8 +99,6 @@ export function IntroMusicProvider({ children }: { children: ReactNode }) {
       }
       setIsMuted(false);
     } else {
-      // Pausing (not stopping/resetting) so un-muting resumes from the same spot,
-      // like any normal player pause button - "it stops" just means silent, not gone.
       if (rampInterval.current) {
         clearInterval(rampInterval.current);
         rampInterval.current = null;
@@ -121,7 +106,7 @@ export function IntroMusicProvider({ children }: { children: ReactNode }) {
       try {
         player.pause();
       } catch {
-        // already released, nothing to pause
+        // already released
       }
       setIsMuted(true);
     }
@@ -136,7 +121,7 @@ export function IntroMusicProvider({ children }: { children: ReactNode }) {
       try {
         player.pause();
       } catch {
-        // already released - fine, nothing to pause.
+        // already released
       }
     }, FADE_OUT_MS + 100);
     return () => clearTimeout(stopTimer);

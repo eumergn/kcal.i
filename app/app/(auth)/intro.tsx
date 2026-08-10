@@ -11,50 +11,19 @@ import SignInScreen from './sign-in';
 
 const introVideo = require('@/assets/videos/intro.mp4');
 
-// Slower than a typical crossfade on purpose - the video's baked-in wordmark reads
-// visibly bolder than the real Logo component it hands off to (video pixels vs. a
-// vector Text render are never going to be pixel-identical in weight), so a quick
-// swap reads as a jump. Stretching the fade out gives the eye time to settle into
-// the real logo before any movement starts, instead of a sudden weight change.
-const CROSSFADE_MS = 600;
-const HOLD_MS = 150; // a brief beat between the crossfade settling and the glide starting, so the moment reads as deliberate rather than instant
+const CROSSFADE_MS = 600; // slow on purpose - video's baked-in wordmark is bolder than the real Logo, so a quick swap reads as a jump
+const HOLD_MS = 150;
 const GLIDE_MS = 480;
-const VOLUME_RAMP_MS = CROSSFADE_MS + HOLD_MS + GLIDE_MS; // ducks out across the same span as the visual transition, not a separate timer
+const VOLUME_RAMP_MS = CROSSFADE_MS + HOLD_MS + GLIDE_MS;
 
 /**
- * Plays once, full-screen, before the sign-in/sign-up welcome screen - the first
- * thing a signed-out user sees on every cold entry into the auth flow. Not
- * skippable by tapping - it only advances when the video actually finishes.
- *
- * The video is pre-padded (via ffmpeg + a frame-by-frame OpenCV pass, see project
- * notes) to a tall portrait canvas with the source's own black-to-white circle-reveal
- * transition extended directly into the new frames, plus a little horizontal margin
- * baked in on both sides so "cover" fit doesn't run the video edge-to-edge on most
- * phones. The reveal is a growing circle centered on the logo, not a flat fade or a
- * simple time-based swap - every pixel in the padding (and the small patched-out
- * region where an unwanted sparkle graphic used to be) uses the exact same
- * per-pixel distance-from-center test as the real content, frame-accurate to the
- * source. The video's own audio track has been stripped entirely - music is a
- * separate, app-owned player (see context/IntroMusicContext.tsx) that keeps playing
- * across the handoff to sign-in instead of stopping with the video.
- *
- * At the end, instead of just navigating - which would cut to sign-in with the
- * default slide-from-right - this runs a three-phase handoff: the video's final
- * frame crossfades into the real Logo component (already centered, matching what
- * the video shows) while it settles in from a slight scale-up; a brief hold; then
- * the logo glides up to sign-in's actual measured position. Sign-in's own entrance
- * animation is set to 'none' so the handoff lands exactly where the glide ends,
- * instead of the whole screen sliding in on top of it.
- *
- * The target position is a REAL measurement, not a guess: an invisible instance of
- * SignInScreen (opacity 0, still fully laid out) is mounted below the video from the
- * moment this screen appears, and reports its own logo's real position the instant
- * it renders - see lib/introTransition.ts. With no tap-to-skip, the video's full 10s
- * runtime is guaranteed time for that layout pass to finish long before the glide
- * ever needs it, and the video is fully opaque on top of it for virtually that whole
- * duration, so there's no rendering path for the invisible copy to be seen even
- * transiently. A percentage-based fallback only covers the true edge case of
- * onLayout somehow never firing at all.
+ * Plays once before sign-in/sign-up. Not skippable by tap - only advances on video
+ * end. Video is pre-baked (ffmpeg + OpenCV, see project notes) with its own
+ * circle-reveal transition and padding, audio stripped (music is a separate player,
+ * see IntroMusicContext). At the end: crossfades into the real Logo component, holds
+ * briefly, then glides up to sign-in's real measured logo position (an invisible
+ * SignInScreen instance below the video reports it - see lib/introTransition.ts).
+ * Sign-in's entrance animation is 'none' so the handoff lands exactly on target.
  */
 export default function IntroScreen() {
   const player = useVideoPlayer(introVideo, (p) => {
@@ -133,10 +102,6 @@ export default function IntroScreen() {
 }
 
 const styles = StyleSheet.create({
-  // White, not black - the crossfade happens once the video's own baked-in
-  // transition has finished, so as the video's opacity fades to 0 during the
-  // crossfade, this needs to match its white ending rather than let black bleed
-  // through behind it.
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: '#FFFFFF' }, // matches video's white ending, not black
   logoOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
 });
