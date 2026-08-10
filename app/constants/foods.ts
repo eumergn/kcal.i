@@ -3,7 +3,7 @@ import { DietType } from '@/context/ProfileContext';
 export type FoodCategory =
   | 'chicken' | 'beef' | 'fish' | 'eggs' | 'dairy' | 'rice' | 'pasta'
   | 'potatoes' | 'oats' | 'bread' | 'beans' | 'lentils' | 'vegetables'
-  | 'fruits' | 'nuts' | 'protein_product';
+  | 'fruits' | 'nuts' | 'protein_product' | 'fats';
 
 /**
  * The real, tagged food roster (category/diet/allergens/fiber) used by the meal-plan
@@ -149,6 +149,12 @@ export const foods: Food[] = [
     caloriesPer100: 46, proteinPer100: 3.4, carbsPer100: 4.8, fatPer100: 1.6, fiberPer100: 0,
     dietCompatible: ['omnivore', 'vegetarian', 'pescatarian'], allergens: ['dairy'],
     priceFR: 0.09, priceDE: 0.07,
+  },
+  {
+    id: 'olive-oil', name: 'Olive oil', category: 'fats',
+    caloriesPer100: 884, proteinPer100: 0, carbsPer100: 0, fatPer100: 100, fiberPer100: 0,
+    dietCompatible: ['omnivore', 'vegetarian', 'vegan', 'pescatarian', 'halal', 'kosher'], allergens: [],
+    priceFR: 0.55, priceDE: 0.45,
   },
 ];
 

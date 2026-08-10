@@ -41,9 +41,11 @@ const PROTEIN_CATEGORIES: FoodCategory[] = [
 ];
 const CARB_CATEGORIES: FoodCategory[] = ['rice', 'pasta', 'potatoes', 'oats', 'bread'];
 const PRODUCE_CATEGORIES: FoodCategory[] = ['vegetables', 'fruits'];
+const FAT_CATEGORIES: FoodCategory[] = ['fats'];
 
 const PRODUCE_GRAMS = 120; // fixed small produce portion per meal, for fiber/micronutrients
 const MAX_ITEM_GRAMS = 350; // sanity cap so a low-density food can't inflate into an absurd portion
+const MAX_FAT_TOPPER_GRAMS = 20; // a realistic cooking-oil drizzle, not a bottle
 
 const MEAL_SCHEDULE: Record<number, { name: string; time: string }[]> = {
   2: [{ name: 'Breakfast', time: '08:00' }, { name: 'Dinner', time: '19:00' }],
@@ -80,6 +82,12 @@ function isEligible(food: Food, profile: MealPlanProfile): boolean {
   if (food.allergens.some((a) => profile.allergies.includes(a))) return false;
   if (profile.dislikedFoodIds.includes(food.id)) return false;
   return true;
+}
+
+function pickCheapestInCategory(eligible: Food[], categories: FoodCategory[], country: 'FR' | 'DE'): Food | undefined {
+  const candidates = eligible.filter((f) => categories.includes(f.category));
+  if (candidates.length === 0) return undefined;
+  return [...candidates].sort((a, b) => priceForCountry(a, country) - priceForCountry(b, country))[0];
 }
 
 /**
@@ -216,7 +224,7 @@ function solveTwoItemGrams(
 
 export function generateMealPlan(
   profile: MealPlanProfile,
-  targets: { proteinG: number; carbsG: number },
+  targets: { proteinG: number; carbsG: number; fatG: number },
   budgetForDay: number,
 ): MealSlot[] {
   const eligible = foods.filter((f) => isEligible(f, profile));
@@ -227,6 +235,7 @@ export function generateMealPlan(
 
   const perMealProtein = targets.proteinG / mealCount;
   const perMealCarbs = targets.carbsG / mealCount;
+  const perMealFat = targets.fatG / mealCount;
 
   const usageCount: Record<string, number> = {};
   const useFood = (id: string) => {
@@ -236,10 +245,8 @@ export function generateMealPlan(
   const meals: MealSlot[] = schedule.map(({ name, time }) => {
     const items: PlannedItem[] = [];
 
-    const produce = eligible.filter((f) => PRODUCE_CATEGORIES.includes(f.category));
-    const produceItem = produce.length
-      ? buildItem([...produce].sort((a, b) => priceForCountry(a, country) - priceForCountry(b, country))[0], PRODUCE_GRAMS, country)
-      : undefined;
+    const produceFood = pickCheapestInCategory(eligible, PRODUCE_CATEGORIES, country);
+    const produceItem = produceFood ? buildItem(produceFood, PRODUCE_GRAMS, country) : undefined;
 
     const proteinFood = pickFood(eligible, PROTEIN_CATEGORIES, 'proteinPer100', usageCount, country);
     const carbFood = pickFood(eligible, CARB_CATEGORIES, 'carbsPer100', usageCount, country);
@@ -262,6 +269,22 @@ export function generateMealPlan(
     }
 
     if (produceItem) items.push(produceItem);
+
+    // Protein/carb foods are picked for macro density, not fat content, so fat is
+    // whatever happens to fall out of them - lean picks like chicken/rice/potatoes
+    // can leave it far short of target. Tops up with a capped drizzle of a fat-dense
+    // food (olive oil) to close whatever gap remains, the same way produce fills in
+    // fiber/micronutrients as a fixed side addition rather than a solved-for macro.
+    const fatSoFar = items.reduce((s, it) => s + it.fatG, 0);
+    const remainingFat = perMealFat - fatSoFar;
+    if (remainingFat > 0) {
+      const fatFood = pickCheapestInCategory(eligible, FAT_CATEGORIES, country);
+      if (fatFood) {
+        const gramsNeeded = Math.min(remainingFat / (fatFood.fatPer100 / 100 || 1), MAX_FAT_TOPPER_GRAMS);
+        items.push(buildItem(fatFood, gramsNeeded, country));
+        useFood(fatFood.id);
+      }
+    }
 
     return sumMeal(name, time, items);
   });
