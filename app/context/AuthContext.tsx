@@ -1,6 +1,5 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
 
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -40,7 +39,7 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
-  deleteAccount: () => Promise<{ error: string | null }>;
+  requestAccountDeletion: () => Promise<{ error: string | null }>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -107,23 +106,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error ? error.message : null };
   };
 
-  // Deletes the auth user server-side (see supabase/functions/delete-account) - this
-  // cascades through user_profile and everything tied to it in one call. Local-only
-  // data (weight log, settings) has no server row to cascade from, so it's cleared
-  // here explicitly; otherwise a different account signing in later on this same
-  // device would inherit a stranger's weight history and preferences.
-  const deleteAccount = async (): Promise<{ error: string | null }> => {
-    const { data, error } = await supabase.functions.invoke('delete-account');
+  // Doesn't delete anything itself - emails a one-time confirmation link (see
+  // supabase/functions/request-account-deletion) and only supabase/functions/
+  // confirm-account-deletion, triggered by clicking it, actually deletes the account.
+  // Nothing changes locally here since nothing has been deleted yet.
+  const requestAccountDeletion = async (): Promise<{ error: string | null }> => {
+    const { data, error } = await supabase.functions.invoke('request-account-deletion');
     if (error) return { error: error.message };
     if (data?.error) return { error: data.error };
-
-    await AsyncStorage.multiRemove(['kcal-i:weight-log', 'kcal-i:settings']);
-    await supabase.auth.signOut();
     return { error: null };
   };
 
   return (
-    <AuthContext.Provider value={{ session, loading, signUp, signIn, signOut, resetPassword, deleteAccount }}>
+    <AuthContext.Provider value={{ session, loading, signUp, signIn, signOut, resetPassword, requestAccountDeletion }}>
       {children}
     </AuthContext.Provider>
   );

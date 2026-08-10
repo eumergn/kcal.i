@@ -29,7 +29,7 @@ export default function IntroScreen() {
         <VideoView
           player={player}
           style={StyleSheet.absoluteFillObject}
-          contentFit="cover"
+          contentFit="contain"
           nativeControls={false}
           allowsFullscreen={false}
           allowsPictureInPicture={false}
@@ -40,5 +40,8 @@ export default function IntroScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
+  // White, not black - the video's own background is white, so with contentFit
+  // "contain" (nothing cropped, unlike "cover" which zoomed in hard on a 16:9 video
+  // filling a much taller portrait screen) the letterbox bars blend in seamlessly.
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
 });

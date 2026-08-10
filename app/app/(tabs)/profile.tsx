@@ -27,7 +27,7 @@ type PopoverKind = 'water' | 'budget' | null;
 export default function ProfileScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
-  const { session, signOut, deleteAccount } = useAuth();
+  const { session, signOut, requestAccountDeletion } = useAuth();
   const [deleting, setDeleting] = useState(false);
   const { scheme: appScheme, toggle: toggleTheme } = useAppTheme();
   const { units, waterGoalLiters, notificationsEnabled, setUnits, setWaterGoalLiters, setNotificationsEnabled } = useSettings();
@@ -77,30 +77,26 @@ export default function ProfileScreen() {
   const confirmDeleteAccount = () => {
     Alert.alert(
       'Delete your account?',
-      'This permanently deletes your profile, meal history, weight log and everything else tied to your account. This cannot be undone.',
+      "We'll email you a confirmation link - your account and all its data are only deleted once you click it. Nothing is deleted yet.",
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete account',
-          style: 'destructive',
-          onPress: () => {
-            // Second confirmation - a mis-tap on an irreversible, full-data-loss action
-            // deserves more friction than the usual one-shot destructive Alert.
-            Alert.alert('Are you absolutely sure?', 'There is no way to recover your data after this.', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Yes, delete everything', style: 'destructive', onPress: runDeleteAccount },
-            ]);
-          },
-        },
+        { text: 'Send confirmation email', style: 'destructive', onPress: runRequestAccountDeletion },
       ],
     );
   };
 
-  const runDeleteAccount = async () => {
+  const runRequestAccountDeletion = async () => {
     setDeleting(true);
-    const { error } = await deleteAccount();
+    const { error } = await requestAccountDeletion();
     setDeleting(false);
-    if (error) Alert.alert('Could not delete account', error);
+    if (error) {
+      Alert.alert('Could not send confirmation email', error);
+    } else {
+      Alert.alert(
+        'Check your email',
+        "We've sent a confirmation link to your email. Your account stays exactly as it is until you click it - the link expires in 1 hour.",
+      );
+    }
   };
 
   return (
@@ -221,7 +217,7 @@ export default function ProfileScreen() {
           style={[styles.deleteButton, { borderColor: c.ringCalories, opacity: deleting ? 0.5 : 1 }]}
         >
           <Text style={[styles.deleteButtonText, { color: c.ringCalories }]}>
-            {deleting ? 'Deleting...' : 'Delete account'}
+            {deleting ? 'Sending...' : 'Delete account'}
           </Text>
         </Pressable>
       </ScrollView>

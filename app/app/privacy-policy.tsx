@@ -70,8 +70,9 @@ export default function PrivacyPolicyScreen() {
 
         <Section title="Your rights" c={c}>
           {'You can permanently delete your account and all associated data at any time from Profile '}
-          {'> Delete account. This immediately and irreversibly removes your profile, meal history, '}
-          {'weight log and everything else tied to your account from our servers.'}
+          {'> Delete account. We email you a confirmation link before anything is deleted - clicking it '}
+          {'irreversibly removes your profile, meal history, weight log and everything else tied to '}
+          {'your account from our servers.'}
         </Section>
 
         <Section title="Contact" c={c}>
