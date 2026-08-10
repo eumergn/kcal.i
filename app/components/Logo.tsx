@@ -1,9 +1,9 @@
 import { View as RNView } from 'react-native';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { DumbbellIcon } from '@/components/DumbbellIcon';
 
 /**
  * The "Kcal.i" wordmark (Bruno Ace) + dumbbell icon lockup. `stacked` matches the
@@ -23,8 +23,7 @@ export function Logo({ layout = 'stacked', size = 'large' }: { layout?: 'stacked
   return (
     <RNView style={{ flexDirection: layout === 'stacked' ? 'column' : 'row', alignItems: 'center', gap }}>
       <Text style={{ fontFamily: 'BrunoAce', fontSize, color: c.text }}>Kcal.i</Text>
-      {/* Stretched horizontally - the stock glyph reads too narrow/small under the wordmark otherwise. */}
-      <FontAwesome5 name="dumbbell" size={iconSize} color={c.text} style={{ transform: [{ scaleX: 1.35 }] }} />
+      <DumbbellIcon size={iconSize} color={c.text} />
     </RNView>
   );
 }
