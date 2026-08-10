@@ -32,7 +32,10 @@ export type Food = {
 export const foods: Food[] = [
   {
     id: 'chicken-breast', name: 'Chicken breast', category: 'chicken',
-    caloriesPer100: 165, proteinPer100: 31, carbsPer100: 0, fatPer100: 3.6, fiberPer100: 0,
+    // Raw/as-purchased basis (USDA FDC 171077), matching how it's priced/portioned -
+    // 165kcal/31g protein was the cooked value, ~37% denser since cooking drives off
+    // water weight. Ground beef and canned tuna below were already raw/as-sold basis.
+    caloriesPer100: 120, proteinPer100: 23, carbsPer100: 0, fatPer100: 2.6, fiberPer100: 0,
     dietCompatible: ['omnivore', 'halal', 'kosher'], allergens: [],
     priceFR: 0.90, priceDE: 0.75,
   },
