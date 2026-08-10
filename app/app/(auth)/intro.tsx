@@ -1,22 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Animated, Dimensions, Easing, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useAudioPlayer } from 'expo-audio';
 import { useEventListener } from 'expo';
 
 import { Logo } from '@/components/Logo';
 import { getSignInLogoCenterY } from '@/lib/introTransition';
+import { useIntroMusic, VOLUME_START, VOLUME_DUCKED } from '@/context/IntroMusicContext';
 
 const introVideo = require('@/assets/videos/intro.mp4');
-const introMusic = require('@/assets/audio/intro-music.mp3');
 
 const CROSSFADE_MS = 220;
 const HOLD_MS = 150; // a brief beat between the crossfade settling and the glide starting, so the moment reads as deliberate rather than instant
 const GLIDE_MS = 480;
 const VOLUME_RAMP_MS = CROSSFADE_MS + HOLD_MS + GLIDE_MS; // ducks out across the same span as the visual transition, not a separate timer
-const VOLUME_BEFORE = 0.75;
-const VOLUME_AFTER = 0.5;
 
 /**
  * Plays once, full-screen, before the sign-in/sign-up welcome screen - the first
@@ -24,15 +21,22 @@ const VOLUME_AFTER = 0.5;
  *
  * The video is pre-padded (via ffmpeg + a frame-by-frame OpenCV pass, see project
  * notes) to a tall portrait canvas with the source's own black-to-white circle-reveal
- * transition extended directly into the new frames - the real reveal is a growing
- * circle centered on the logo, not a flat fade, so the padding continues that same
- * circle (same center, frame-accurate radius for every frame that exists in the
- * original, then a smooth continuation to cover the taller canvas) rather than a
- * separately-timed color swap. That's necessary, not just nicer: VideoView paints an
- * opaque background within its own bounds regardless of contentFit, so a wrapping
- * view's background color can never show through in the letterboxed margins - baking
- * the real transition into the video itself is the only way to actually match it.
- * The video's own audio track has been stripped entirely - see the music player below.
+ * transition extended directly into the new frames, plus a little horizontal margin
+ * baked in on both sides so "cover" fit doesn't run the video edge-to-edge on most
+ * phones. The reveal is a growing circle centered on the logo, not a flat fade or a
+ * simple time-based swap - every pixel in the padding (and the small patched-out
+ * region where an unwanted sparkle graphic used to be) uses the exact same
+ * per-pixel distance-from-center test as the real content, frame-accurate to the
+ * source. An earlier version patched that sparkle region with an independent
+ * time-based black/white switch instead of the real position-dependent circle test,
+ * which left a visibly wrong square during the few frames where the two disagreed -
+ * fixed by making every pixel, everywhere, follow the one real circle formula.
+ * VideoView paints an opaque background within its own bounds regardless of
+ * contentFit, so a wrapping view's background color can never show through in the
+ * letterboxed margins - baking the real transition into the video itself is the only
+ * way to actually match it. The video's own audio track has been stripped entirely -
+ * music is a separate, app-owned player (see context/IntroMusicContext.tsx) that
+ * keeps playing across the handoff to sign-in instead of stopping with the video.
  *
  * At the end (or on tap-to-skip), instead of just navigating - which would cut to
  * sign-in with the default slide-from-right - this runs a three-phase handoff: the
@@ -44,29 +48,18 @@ const VOLUME_AFTER = 0.5;
  *
  * The target position comes from sign-in.tsx's own onLayout report (see
  * lib/introTransition.ts) whenever a real, on-screen instance of it has already
- * measured itself this session - accurate to the real device, not a guess. An
- * earlier version tried to get that measurement on every single launch (including
- * the very first one) by mounting an invisible copy of SignInScreen here at
- * opacity:0 - reverted, because opacity:0 doesn't reliably composite as fully
- * transparent on every Android renderer, and it risked showing as a visible dark
- * rectangle instead of just being an invisible measurement pass. The one gap this
- * leaves is a fresh install's very first glide, before sign-in has ever mounted for
- * real - that one case falls back to a tuned Dimensions-based estimate below; every
- * glide after that (including the very next one, since sign-in mounts for real
- * moments later) uses the real measured value.
+ * measured itself this session - accurate to the real device, not a guess. The one
+ * gap is a fresh install's very first glide, before sign-in has ever mounted for
+ * real - that one case falls back to a tuned Dimensions-based estimate; every glide
+ * after that (including the very next one, since sign-in mounts for real moments
+ * later) uses the real measured value.
  */
 export default function IntroScreen() {
   const player = useVideoPlayer(introVideo, (p) => {
     p.loop = false;
     p.play();
   });
-
-  const music = useAudioPlayer(introMusic);
-  useEffect(() => {
-    music.volume = VOLUME_BEFORE;
-    music.play();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { duck, setShowWidget } = useIntroMusic();
 
   const [transitioning, setTransitioning] = useState(false);
   const videoOpacity = useRef(new Animated.Value(1)).current;
@@ -74,25 +67,11 @@ export default function IntroScreen() {
   const logoScale = useRef(new Animated.Value(1.08)).current;
   const logoTranslateY = useRef(new Animated.Value(0)).current;
 
-  const duckMusic = () => {
-    const steps = 24;
-    const stepMs = VOLUME_RAMP_MS / steps;
-    let i = 0;
-    const interval = setInterval(() => {
-      i++;
-      music.volume = VOLUME_BEFORE + (VOLUME_AFTER - VOLUME_BEFORE) * (i / steps);
-      if (i >= steps) {
-        clearInterval(interval);
-        music.pause();
-      }
-    }, stepMs);
-  };
-
   const runTransition = () => {
     if (transitioning) return;
     setTransitioning(true);
     player.pause();
-    duckMusic();
+    duck(VOLUME_START, VOLUME_DUCKED, VOLUME_RAMP_MS);
 
     const screenHeight = Dimensions.get('window').height;
     const targetCenterY = getSignInLogoCenterY() ?? screenHeight * 0.18;
@@ -112,6 +91,7 @@ export default function IntroScreen() {
         useNativeDriver: true,
       }),
     ]).start(() => {
+      setShowWidget(true);
       router.replace('/sign-in');
     });
   };
