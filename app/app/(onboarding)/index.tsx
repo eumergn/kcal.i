@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, View as RNView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -172,6 +173,11 @@ export default function OnboardingScreen() {
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }));
 
+  const backToSignIn = async () => {
+    await signOut();
+    router.replace('/sign-in');
+  };
+
   const toggleAllergy = (allergy: string) =>
     setForm((f) => {
       if (allergy === NONE_ALLERGY) {
@@ -248,7 +254,7 @@ export default function OnboardingScreen() {
 
         {step === 0 && (
           <RNView style={styles.headerRow}>
-            <Pressable onPress={signOut} hitSlop={14} accessibilityLabel="Back to sign in">
+            <Pressable onPress={backToSignIn} hitSlop={14} accessibilityLabel="Back to sign in">
               <FontAwesome name="chevron-left" size={16} color={c.text} />
             </Pressable>
           </RNView>
@@ -524,7 +530,7 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 24, paddingBottom: 48, flexGrow: 1 },
+  content: { padding: 24, paddingBottom: 120, flexGrow: 1 }, // extra clearance so the sound widget doesn't collide with the nav button
 
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 28 },
   progressRow: { flex: 1, flexDirection: 'row', gap: 6 },
