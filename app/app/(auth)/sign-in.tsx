@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useRef, useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View as RNView } from 'react-native';
 import { Link, router } from 'expo-router';
 
 import { Text, View } from '@/components/Themed';
@@ -9,6 +9,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/context/AuthContext';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { setSignInLogoCenterY } from '@/lib/introTransition';
 
 export default function SignInScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -19,6 +20,7 @@ export default function SignInScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const logoWrapRef = useRef<RNView>(null);
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -36,9 +38,19 @@ export default function SignInScreen() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.content}>
-        <View style={styles.logoWrap} lightColor="transparent" darkColor="transparent">
+        <RNView
+          ref={logoWrapRef}
+          style={styles.logoWrap}
+          onLayout={() => {
+            // Reports where the logo actually lands so intro.tsx's glide-transition
+            // can target the real position instead of guessing it.
+            logoWrapRef.current?.measureInWindow((_x, y, _width, height) => {
+              setSignInLogoCenterY(y + height / 2);
+            });
+          }}
+        >
           <Logo />
-        </View>
+        </RNView>
         <Text style={[styles.title, { color: c.text }]}>Welcome back</Text>
         <Text style={[styles.subtitle, { color: c.secondaryText }]}>Sign in to see today&apos;s plan.</Text>
 
