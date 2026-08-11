@@ -253,8 +253,8 @@ export default function OnboardingScreen() {
         )}
 
         {step === 0 && (
-          <RNView style={styles.headerRow}>
-            <Pressable onPress={backToSignIn} hitSlop={14} accessibilityLabel="Back to sign in">
+          <RNView style={[styles.headerRow, { marginBottom: 44 }]}>
+            <Pressable onPress={backToSignIn} hitSlop={14} style={styles.backToSignInButton} accessibilityLabel="Back to sign in">
               <FontAwesome name="chevron-left" size={16} color={c.text} />
             </Pressable>
           </RNView>
@@ -536,6 +536,7 @@ const styles = StyleSheet.create({
   footer: { paddingHorizontal: 24, paddingTop: 12 },
 
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 28 },
+  backToSignInButton: { padding: 8, marginLeft: -8 },
   progressRow: { flex: 1, flexDirection: 'row', gap: 6 },
   progressDot: { flex: 1, height: 4, borderRadius: 2 },
 
