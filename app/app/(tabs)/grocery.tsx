@@ -11,6 +11,7 @@ import { GroceryItem, formatGrams, itemCost, normalizeToMonthly } from '@/consta
 import { ProgressRing } from '@/components/ProgressRing';
 import { useProfile } from '@/context/ProfileContext';
 import { usePlan } from '@/context/PlanContext';
+import { supabase } from '@/lib/supabase';
 
 const STEP_GRAMS = 250;
 const DAYS_PER_MONTH = 30;
@@ -149,28 +150,47 @@ export default function GroceryScreen() {
   // not just their price. neededGrams is each food's daily plan quantity scaled to a
   // month. Runs once meals are actually generated (guarded, like the old seeding
   // effect), so later budget/profile edits don't wipe purchased progress already logged.
+  //
+  // Pricing prefers live per-country research (grocery_price_research, refreshed on
+  // signup by the research-grocery-prices Edge Function - real web-searched prices, one
+  // per food) over catalog's static priceFR/priceDE estimate, falling back to static if
+  // the research row doesn't exist yet, is missing that food, or the query fails.
   useEffect(() => {
     if (!profile || meals.length === 0 || seededRef.current) return;
     seededRef.current = true;
 
-    const dailyGramsByFood: Record<string, number> = {};
-    for (const meal of meals) {
-      for (const item of meal.items) {
-        dailyGramsByFood[item.foodId] = (dailyGramsByFood[item.foodId] ?? 0) + item.grams;
+    (async () => {
+      const dailyGramsByFood: Record<string, number> = {};
+      for (const meal of meals) {
+        for (const item of meal.items) {
+          dailyGramsByFood[item.foodId] = (dailyGramsByFood[item.foodId] ?? 0) + item.grams;
+        }
       }
-    }
 
-    const built: GroceryItem[] = Object.entries(dailyGramsByFood).map(([foodId, dailyGrams]) => {
-      const food = catalog.find((f) => f.id === foodId);
-      return {
-        id: foodId,
-        name: food?.name ?? foodId,
-        neededGrams: dailyGrams * DAYS_PER_MONTH,
-        pricePer100: food?.pricePer100 ?? 0.5,
-        purchasedGrams: 0,
-      };
-    });
-    setItems(built);
+      let liveTable: Record<string, number> = {};
+      try {
+        const { data } = await supabase
+          .from('grocery_price_research')
+          .select('prices')
+          .eq('country', profile.country)
+          .maybeSingle();
+        if (data?.prices) liveTable = data.prices;
+      } catch {
+        // stays with static catalog prices below
+      }
+
+      const built: GroceryItem[] = Object.entries(dailyGramsByFood).map(([foodId, dailyGrams]) => {
+        const food = catalog.find((f) => f.id === foodId);
+        return {
+          id: foodId,
+          name: food?.name ?? foodId,
+          neededGrams: dailyGrams * DAYS_PER_MONTH,
+          pricePer100: liveTable[foodId] ?? food?.pricePer100 ?? 0.5,
+          purchasedGrams: 0,
+        };
+      });
+      setItems(built);
+    })();
   }, [profile, meals, catalog]);
 
   const totals = useMemo(() => {

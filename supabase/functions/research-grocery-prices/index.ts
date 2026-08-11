@@ -1,10 +1,15 @@
-// Supabase Edge Function (Deno runtime). Researches current budget/premium grocery
-// prices for a country via Gemini with Google Search grounding, caches the result in
+// Supabase Edge Function (Deno runtime). Researches current typical grocery prices for
+// a country via Gemini with Google Search grounding, caches the result in
 // public.grocery_price_research. Called from the app right after onboarding submits
 // (see context/ProfileContext.tsx's createProfile), and only re-researches if the
 // cached row for that country is missing or older than 30 days - the prices aren't
 // personal, so every signup from the same country reuses the same cached research
 // instead of paying for it again.
+//
+// One real per-100g price per food (not a budget/premium tier pair) - covers the full
+// lib/mealPlanner.ts food roster (constants/foods.ts), not just a fixed subset. The
+// app uses this as a live override on top of foods.ts's static priceFR/priceDE
+// estimates when available; the static prices remain the fallback (see grocery.tsx).
 //
 // Required secrets (set via `supabase secrets set NAME=value`, never commit these):
 //   GEMINI_API_KEY   - free-tier Google AI Studio key, server-side only, never in app code
@@ -15,34 +20,43 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const ITEMS: Record<string, string> = {
   'chicken-breast': 'raw chicken breast',
-  oats: 'rolled oats',
-  carrots: 'fresh carrots',
-  'tuna-canned': 'canned tuna in water',
-  bread: 'whole grain bread',
-  'ground-beef': 'ground beef (5-15% fat)',
-  rice: 'white rice, dry',
   eggs: 'eggs (chicken, medium)',
+  'greek-yogurt': 'plain greek yogurt',
+  'tuna-canned': 'canned tuna in water',
+  'ground-beef': 'ground beef (5-15% fat)',
+  'cottage-cheese': 'cottage cheese',
+  tofu: 'firm tofu',
+  lentils: 'dry or canned lentils',
+  chickpeas: 'dry or canned chickpeas',
+  rice: 'white rice, dry',
+  oats: 'rolled oats',
+  potatoes: 'potatoes',
   pasta: 'whole wheat pasta, dry',
+  bread: 'whole grain bread',
+  banana: 'bananas',
+  apple: 'apples',
+  'frozen-veg': 'frozen mixed vegetables',
+  carrots: 'fresh carrots',
+  spinach: 'fresh spinach',
+  milk: 'semi-skimmed milk',
+  'olive-oil': 'olive oil',
 };
 
 const STALE_AFTER_DAYS = 30;
 const GEMINI_MODEL = 'gemini-flash-latest'; // Google-maintained alias for the current flash model - avoids hardcoding a dated snapshot that later gets deprecated (a pinned "gemini-2.5-flash" already 404'd for new API keys once)
 
-type Tier = 'budget' | 'premium';
-type PriceTable = Record<string, Record<Tier, number>>;
+type PriceTable = Record<string, number>;
 
 function buildPrompt(country: 'FR' | 'DE'): string {
   const countryName = country === 'FR' ? 'France' : 'Germany';
   const itemList = Object.entries(ITEMS).map(([id, label]) => `- ${id}: ${label}`).join('\n');
-  return `Search the web for current typical supermarket prices in ${countryName} for these grocery items:
+  return `Search the web for current typical mainstream supermarket prices in ${countryName} for these grocery items:
 ${itemList}
 
-For each item, find:
-- "budget": a typical price at a discount/budget supermarket (e.g. Lidl, Aldi, Action) in EUR per 100g
-- "premium": a typical price for a quality/organic option at a mainstream or premium supermarket in EUR per 100g
+For each item, find a single typical price in EUR per 100g at a mainstream supermarket (not a discount-only or luxury-only price - a representative everyday price).
 
 Respond with ONLY a JSON object, no other text, no markdown code fences, in exactly this shape:
-{"chicken-breast":{"budget":0.00,"premium":0.00},"oats":{"budget":0.00,"premium":0.00}, ...one entry per item id above...}`;
+{"chicken-breast":0.00,"eggs":0.00, ...one entry per item id above, value is EUR per 100g...}`;
 }
 
 async function researchCountry(country: 'FR' | 'DE'): Promise<PriceTable> {
@@ -73,7 +87,7 @@ async function researchCountry(country: 'FR' | 'DE'): Promise<PriceTable> {
 
   const parsed = JSON.parse(jsonMatch[0]) as PriceTable;
   for (const id of Object.keys(ITEMS)) {
-    if (!parsed[id] || typeof parsed[id].budget !== 'number' || typeof parsed[id].premium !== 'number') {
+    if (typeof parsed[id] !== 'number') {
       throw new Error(`Missing or malformed price for "${id}" in model response`);
     }
   }
