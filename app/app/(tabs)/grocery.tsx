@@ -7,21 +7,13 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import {
-  GroceryItem,
-  buildInitialGroceryItems,
-  formatGrams,
-  initialGroceryItems,
-  itemCost,
-  normalizeToMonthly,
-  selectPriceTier,
-  staticPriceTable,
-} from '@/constants/groceryData';
+import { GroceryItem, formatGrams, itemCost, normalizeToMonthly } from '@/constants/groceryData';
 import { ProgressRing } from '@/components/ProgressRing';
 import { useProfile } from '@/context/ProfileContext';
-import { supabase } from '@/lib/supabase';
+import { usePlan } from '@/context/PlanContext';
 
 const STEP_GRAMS = 250;
+const DAYS_PER_MONTH = 30;
 const WALLET_BROWN = '#8B5E3C';
 
 const ITEM_ICONS: Record<string, (color: string) => React.ReactNode> = {
@@ -34,6 +26,18 @@ const ITEM_ICONS: Record<string, (color: string) => React.ReactNode> = {
   rice: (col) => <MaterialCommunityIcons name="rice" size={17} color={col} />,
   eggs: (col) => <FontAwesome5 name="egg" size={16} color={col} />,
   pasta: (col) => <MaterialCommunityIcons name="pasta" size={17} color={col} />,
+  'greek-yogurt': (col) => <MaterialCommunityIcons name="cup" size={17} color={col} />,
+  'cottage-cheese': (col) => <MaterialCommunityIcons name="cheese" size={17} color={col} />,
+  tofu: (col) => <MaterialCommunityIcons name="cube-outline" size={17} color={col} />,
+  lentils: (col) => <MaterialCommunityIcons name="grain" size={17} color={col} />,
+  chickpeas: (col) => <MaterialCommunityIcons name="grain" size={17} color={col} />,
+  potatoes: (col) => <MaterialCommunityIcons name="food-variant" size={17} color={col} />,
+  banana: (col) => <FontAwesome5 name="apple-alt" size={16} color={col} />,
+  apple: (col) => <FontAwesome5 name="apple-alt" size={16} color={col} />,
+  'frozen-veg': (col) => <MaterialCommunityIcons name="snowflake" size={17} color={col} />,
+  spinach: (col) => <MaterialCommunityIcons name="leaf" size={17} color={col} />,
+  milk: (col) => <MaterialCommunityIcons name="cup-water" size={17} color={col} />,
+  'olive-oil': (col) => <MaterialCommunityIcons name="bottle-tonic-outline" size={17} color={col} />,
 };
 const defaultIcon = (col: string) => <FontAwesome5 name="shopping-basket" size={15} color={col} />;
 
@@ -124,10 +128,10 @@ function GroceryRow({
 export default function GroceryScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
-  const [items, setItems] = useState(initialGroceryItems);
-  const [tier, setTier] = useState<'budget' | 'premium'>('budget');
+  const [items, setItems] = useState<GroceryItem[]>([]);
   const seededRef = useRef(false);
   const { profile } = useProfile();
+  const { meals, catalog } = usePlan();
 
   // Colorful per-item rings, matching Home's macro palette - only the top "Spent"
   // summary ring stays dark gray, not every ring on the screen.
@@ -139,31 +143,35 @@ export default function GroceryScreen() {
   // entered, which is the inconsistency this fixes.
   const monthlyBudget = profile ? normalizeToMonthly(profile.budget_amount, profile.budget_period) : 0;
 
-  // Seeds real country + tier-appropriate prices once the profile first loads - only
-  // once, so later budget edits (which would change the tier) don't wipe purchased
-  // progress the user has already logged. Prefers live-researched prices (cached in
-  // grocery_price_research by the research-grocery-prices Edge Function, triggered on
-  // signup) and falls back to the static researched table if that row doesn't exist
-  // yet (function hasn't run, failed, or isn't deployed) or the query errors.
+  // Builds the shopping list from the REAL generated meal plan (PlanContext.meals -
+  // already budget/diet-aware via lib/mealPlanner.ts) instead of a fixed static list,
+  // so a bigger budget or a different diet genuinely changes which foods show up here,
+  // not just their price. neededGrams is each food's daily plan quantity scaled to a
+  // month. Runs once meals are actually generated (guarded, like the old seeding
+  // effect), so later budget/profile edits don't wipe purchased progress already logged.
   useEffect(() => {
-    if (!profile || seededRef.current) return;
+    if (!profile || meals.length === 0 || seededRef.current) return;
     seededRef.current = true;
 
-    (async () => {
-      let table = staticPriceTable(profile.country);
-      const { data } = await supabase
-        .from('grocery_price_research')
-        .select('prices')
-        .eq('country', profile.country)
-        .maybeSingle();
-      if (data?.prices) table = data.prices;
+    const dailyGramsByFood: Record<string, number> = {};
+    for (const meal of meals) {
+      for (const item of meal.items) {
+        dailyGramsByFood[item.foodId] = (dailyGramsByFood[item.foodId] ?? 0) + item.grams;
+      }
+    }
 
-      const monthly = normalizeToMonthly(profile.budget_amount, profile.budget_period);
-      const selectedTier = selectPriceTier(monthly, table);
-      setTier(selectedTier);
-      setItems(buildInitialGroceryItems(table, selectedTier));
-    })();
-  }, [profile]);
+    const built: GroceryItem[] = Object.entries(dailyGramsByFood).map(([foodId, dailyGrams]) => {
+      const food = catalog.find((f) => f.id === foodId);
+      return {
+        id: foodId,
+        name: food?.name ?? foodId,
+        neededGrams: dailyGrams * DAYS_PER_MONTH,
+        pricePer100: food?.pricePer100 ?? 0.5,
+        purchasedGrams: 0,
+      };
+    });
+    setItems(built);
+  }, [profile, meals, catalog]);
 
   const totals = useMemo(() => {
     const spent = items.reduce((s, it) => s + itemCost(it, it.purchasedGrams), 0);
@@ -208,7 +216,9 @@ export default function GroceryScreen() {
       <View style={styles.sectionTitleRow} lightColor="transparent" darkColor="transparent">
         <Text style={[styles.sectionTitle, { color: c.text }]}>Grocery items</Text>
         <View style={[styles.tierBadge, { backgroundColor: c.cardDivider }]}>
-          <Text style={[styles.tierBadgeText, { color: c.text }]}>{tier === 'premium' ? 'Quality picks' : 'Budget picks'}</Text>
+          <Text style={[styles.tierBadgeText, { color: totals.projected <= monthlyBudget ? c.ringProtein : c.ringCalories }]}>
+            {totals.projected <= monthlyBudget ? 'Within budget' : 'Over budget'}
+          </Text>
         </View>
       </View>
       <View style={[styles.itemsCard, { backgroundColor: c.card, borderColor: c.cardDivider }]}>
