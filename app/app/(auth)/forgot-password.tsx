@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   form: { gap: 12 },
   errorText: { fontSize: 13, fontWeight: '600' },
 
-  primaryButton: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
+  primaryButton: { borderRadius: 14, paddingVertical: 16, paddingHorizontal: 32, alignItems: 'center', marginTop: 8 },
   primaryButtonText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
 
   footer: { alignItems: 'center', marginTop: 32 },
