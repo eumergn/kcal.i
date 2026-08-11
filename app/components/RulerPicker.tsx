@@ -23,6 +23,7 @@ export function RulerPicker({
   majorEvery = 5,
   decimals = 0,
   orientation = 'vertical',
+  reverseVertical = false,
   unit,
   colors,
 }: {
@@ -34,6 +35,7 @@ export function RulerPicker({
   majorEvery?: number;
   decimals?: number;
   orientation?: 'vertical' | 'horizontal';
+  reverseVertical?: boolean;
   unit: string;
   colors: (typeof Colors)['light'];
 }) {
@@ -44,20 +46,32 @@ export function RulerPicker({
     return arr;
   }, [min, max, step]);
 
-  const closestIndex = (v: number) => Math.round((v - min) / step);
-  const initialIndex = Math.max(0, Math.min(items.length - 1, closestIndex(value)));
+  const isVertical = orientation === 'vertical';
+  const flip = isVertical && reverseVertical;
+
+  // Optionally shows highest-at-top, lowest-at-bottom for a vertical ruler (a physical
+  // ruler/thermometer feel) instead of the default ascending top-to-bottom. `items`
+  // itself stays ascending so the min/max math above stays simple - this is purely a
+  // display-order flip, opt-in per instance so it doesn't affect every vertical picker.
+  const displayItems = flip ? [...items].reverse() : items;
+
+  const closestIndex = (v: number) => {
+    const i = Math.round((v - min) / step);
+    return flip ? items.length - 1 - i : i;
+  };
+  const initialIndex = Math.max(0, Math.min(displayItems.length - 1, closestIndex(value)));
   const lastIndex = useRef(initialIndex);
 
   const indexFromEvent = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offset = orientation === 'vertical' ? e.nativeEvent.contentOffset.y : e.nativeEvent.contentOffset.x;
-    return Math.max(0, Math.min(items.length - 1, Math.round(offset / ITEM_SIZE)));
+    return Math.max(0, Math.min(displayItems.length - 1, Math.round(offset / ITEM_SIZE)));
   };
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = indexFromEvent(e);
     if (index === lastIndex.current) return;
     lastIndex.current = index;
-    onChange(items[index]);
+    onChange(displayItems[index]);
   };
 
   // onScroll alone can miss the exact final rest position - the last event fired
@@ -67,10 +81,8 @@ export function RulerPicker({
   const handleMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = indexFromEvent(e);
     lastIndex.current = index;
-    onChange(items[index]);
+    onChange(displayItems[index]);
   };
-
-  const isVertical = orientation === 'vertical';
 
   return (
     <RNView>
@@ -78,7 +90,13 @@ export function RulerPicker({
         <Text style={{ color: colors.text }}>{value.toFixed(decimals)}</Text>
         <Text style={{ color: colors.secondaryText, fontWeight: '600' }}> {unit}</Text>
       </Text>
-      <RNView style={isVertical ? { height: VISIBLE_SIZE, justifyContent: 'center' } : { height: 72, justifyContent: 'center' }}>
+      <RNView
+        style={
+          isVertical
+            ? { height: VISIBLE_SIZE, justifyContent: 'center' }
+            : { height: 72, width: VISIBLE_SIZE, alignSelf: 'center', justifyContent: 'center' }
+        }
+      >
         <RNView
           pointerEvents="none"
           style={isVertical ? [styles.centerLineH, { backgroundColor: colors.text }] : [styles.centerLineV, { backgroundColor: colors.text }]}
@@ -97,7 +115,7 @@ export function RulerPicker({
           onScroll={handleScroll}
           onMomentumScrollEnd={handleMomentumEnd}
         >
-          {items.map((v, i) => {
+          {displayItems.map((v, i) => {
             const isMajor = i % majorEvery === 0;
             const isSelected = v === value;
             const label = v.toFixed(decimals);

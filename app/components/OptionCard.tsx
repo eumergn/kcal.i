@@ -5,7 +5,9 @@ import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 
 /** A bordered, icon-led selectable row - the reference's choice-card pattern, used
- * for gender, activity level, gym experience, goal type, diet, country and more. */
+ * for gender, activity level, gym experience, goal type, diet, country and more.
+ * Pass interactive=false for a plain read-only list row (e.g. a feature summary) -
+ * same visual language, but no Pressable/button semantics or touch feedback. */
 export function OptionCard({
   icon,
   label,
@@ -13,6 +15,7 @@ export function OptionCard({
   selected,
   onPress,
   colors,
+  interactive = true,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -20,17 +23,14 @@ export function OptionCard({
   selected: boolean;
   onPress: () => void;
   colors: (typeof Colors)['light'];
+  interactive?: boolean;
 }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.card,
-        { backgroundColor: colors.card, borderColor: selected ? colors.text : colors.cardDivider, borderWidth: selected ? 1.5 : StyleSheet.hairlineWidth },
-      ]}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-    >
+  const cardStyle = [
+    styles.card,
+    { backgroundColor: colors.card, borderColor: selected ? colors.text : colors.cardDivider, borderWidth: selected ? 1.5 : StyleSheet.hairlineWidth },
+  ];
+  const content = (
+    <>
       <RNView style={[styles.iconWrap, { backgroundColor: colors.cardDivider }]}>{icon}</RNView>
       <RNView style={styles.textCol}>
         <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
@@ -41,6 +41,16 @@ export function OptionCard({
           <FontAwesome name="check" size={11} color={colors.background} />
         </RNView>
       )}
+    </>
+  );
+
+  if (!interactive) {
+    return <RNView style={cardStyle}>{content}</RNView>;
+  }
+
+  return (
+    <Pressable onPress={onPress} style={cardStyle} accessibilityRole="button" accessibilityState={{ selected }}>
+      {content}
     </Pressable>
   );
 }

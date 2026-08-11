@@ -1,5 +1,7 @@
-import { ScrollView, StyleSheet } from 'react-native';
-import { Stack } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, View as RNView } from 'react-native';
+import { router, Stack } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
@@ -19,10 +21,18 @@ function Section({ title, children, c }: { title: string; children: React.ReactN
 export default function PrivacyPolicyScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = Colors[scheme];
+  const insets = useSafeAreaInsets();
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Privacy Policy' }} />
+      <Stack.Screen options={{ headerShown: false }} />
+      <RNView style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: c.background, borderBottomColor: c.cardDivider }]}>
+        <Pressable onPress={() => router.back()} hitSlop={14} style={styles.backButton} accessibilityLabel="Back">
+          <FontAwesome name="chevron-left" size={16} color={c.text} />
+        </Pressable>
+        <Text style={[styles.headerTitle, { color: c.text }]}>Privacy Policy</Text>
+        <RNView style={styles.backButton} />
+      </RNView>
       <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.content}>
         <Text style={[styles.updated, { color: c.secondaryText }]}>Last updated: {LAST_UPDATED}</Text>
         <Text style={[styles.intro, { color: c.secondaryText }]}>
@@ -85,6 +95,9 @@ export default function PrivacyPolicyScreen() {
 }
 
 const styles = StyleSheet.create({
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  backButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 15, fontWeight: '800' },
   content: { padding: 20, paddingBottom: 60 },
   updated: { fontSize: 12, fontWeight: '600', marginBottom: 12 },
   intro: { fontSize: 13, fontWeight: '600', lineHeight: 19, marginBottom: 28 },

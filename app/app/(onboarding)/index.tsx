@@ -323,7 +323,7 @@ export default function OnboardingScreen() {
           <>
             <Text style={[styles.title, { color: c.text }]}>What&apos;s your height?</Text>
             <Text style={[styles.subtitle, { color: c.secondaryText }]}>We&apos;ll use this to calculate your calorie needs.</Text>
-            <RulerPicker value={form.height_cm} onChange={(v) => update('height_cm', v)} min={140} max={220} unit="cm" colors={c} />
+            <RulerPicker value={form.height_cm} onChange={(v) => update('height_cm', v)} min={140} max={220} unit="cm" reverseVertical colors={c} />
           </>
         )}
 
@@ -498,11 +498,11 @@ export default function OnboardingScreen() {
             <Text style={[styles.title, { color: c.text }]}>Here&apos;s what your plan includes</Text>
             <Text style={[styles.subtitle, { color: c.secondaryText }]}>Your personalized plan to reach {form.goal_weight_kg}kg.</Text>
             <View style={styles.form} lightColor="transparent" darkColor="transparent">
-              <OptionCard icon={<FontAwesome5 name="bullseye" size={18} color={c.text} />} label="Calorie Tracking" description="Track effortlessly and stay on target" selected={false} onPress={() => {}} colors={c} />
-              <OptionCard icon={<FontAwesome5 name="camera" size={18} color={c.text} />} label="Barcode Food Scanner" description="Scan products and get instant nutrition" selected={false} onPress={() => {}} colors={c} />
-              <OptionCard icon={<FontAwesome5 name="shopping-basket" size={18} color={c.text} />} label="Budget-Aware Grocery Plan" description="Meals that fit what you actually spend" selected={false} onPress={() => {}} colors={c} />
-              <OptionCard icon={<FontAwesome5 name="chart-line" size={18} color={c.text} />} label="Progress Tracking" description="Monitor your progress and stay motivated" selected={false} onPress={() => {}} colors={c} />
-              <OptionCard icon={<FontAwesome5 name="bell" size={18} color={c.text} />} label="Smart Reminders" description="Meal reminders to keep you consistent" selected={false} onPress={() => {}} colors={c} />
+              <OptionCard icon={<FontAwesome5 name="bullseye" size={18} color={c.text} />} label="Calorie Tracking" description="Track effortlessly and stay on target" selected={false} onPress={() => {}} colors={c} interactive={false} />
+              <OptionCard icon={<FontAwesome5 name="camera" size={18} color={c.text} />} label="Barcode Food Scanner" description="Scan products and get instant nutrition" selected={false} onPress={() => {}} colors={c} interactive={false} />
+              <OptionCard icon={<FontAwesome5 name="shopping-basket" size={18} color={c.text} />} label="Budget-Aware Grocery Plan" description="Meals that fit what you actually spend" selected={false} onPress={() => {}} colors={c} interactive={false} />
+              <OptionCard icon={<FontAwesome5 name="chart-line" size={18} color={c.text} />} label="Progress Tracking" description="Monitor your progress and stay motivated" selected={false} onPress={() => {}} colors={c} interactive={false} />
+              <OptionCard icon={<FontAwesome5 name="bell" size={18} color={c.text} />} label="Smart Reminders" description="Meal reminders to keep you consistent" selected={false} onPress={() => {}} colors={c} interactive={false} />
             </View>
           </>
         )}

@@ -6,7 +6,7 @@ import { useProfile } from '@/context/ProfileContext';
 
 const introMusic = require('@/assets/audio/intro-music.mp3');
 
-export const VOLUME_START = 0.8;
+export const VOLUME_START = 0.1;
 export const VOLUME_DUCKED = 0.02;
 const START_DELAY_MS = 8000;
 const FADE_OUT_MS = 1800;
@@ -36,6 +36,11 @@ export function IntroMusicProvider({ children }: { children: ReactNode }) {
   const rampInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const releasedRef = useRef(false);
   const startedRef = useRef(false);
+  const inAppRef = useRef(false);
+
+  useEffect(() => {
+    inAppRef.current = !!session && profileStatus === 'present';
+  }, [session, profileStatus]);
 
   useEffect(() => {
     return () => {
@@ -77,7 +82,12 @@ export function IntroMusicProvider({ children }: { children: ReactNode }) {
     if (!status.isLoaded || startedRef.current) return;
     startedRef.current = true;
     const timer = setTimeout(() => {
-      if (releasedRef.current) return;
+      // Re-check at fire time, not just at schedule time - the user may have
+      // already reached the main app during the delay (fast sign-in, or already
+      // fully onboarded on reopen), in which case starting playback now would
+      // never get stopped since the stop-effect only reacts to session/profile
+      // *changes*, not to a late arrival like this one.
+      if (releasedRef.current || inAppRef.current) return;
       player.loop = true;
       player.volume = 0;
       player.play();
