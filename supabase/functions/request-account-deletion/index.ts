@@ -15,7 +15,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { deletionConfirmationEmail } from '../_shared/emailTemplate.ts';
 
 const TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
-const SENDGRID_FROM = { email: 'kcal.i@outlook.com', name: 'kcal.i' };
+const SENDGRID_FROM = { email: 'no-reply@kcal-i.com', name: 'kcal.i' };
 
 Deno.serve(async (req) => {
   try {
