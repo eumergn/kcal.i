@@ -7,7 +7,7 @@ import { useProfile } from '@/context/ProfileContext';
 const introMusic = require('@/assets/audio/intro-music.mp3');
 
 export const VOLUME_START = 0.1;
-export const VOLUME_DUCKED = 0.02;
+export const VOLUME_DUCKED = 0.08;
 const START_DELAY_MS = 8000;
 const FADE_OUT_MS = 1800;
 const SONG_TITLE = 'Whispers of Rain - djovan';
